@@ -1,0 +1,35 @@
+{
+  "version": "2.0",
+  "logical_tile_size": [
+    64,
+    32
+  ],
+  "tile_sprite_canvas": [
+    96,
+    72
+  ],
+  "prop_sprite_canvas": [
+    96,
+    112
+  ],
+  "anchor": "bottom-center",
+  "grid_edge_midpoints": {
+    "N": [
+      32,
+      44
+    ],
+    "E": [
+      64,
+      44
+    ],
+    "S": [
+      64,
+      60
+    ],
+    "W": [
+      32,
+      60
+    ]
+  },
+  "note": "Repair set with exact grid-aligned roads/fences/gates and transparent pine."
+}
