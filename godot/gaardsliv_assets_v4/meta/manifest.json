@@ -1,0 +1,37 @@
+{
+  "version": "4.0",
+  "style": "Settlers-inspired hand-painted isometric countryside",
+  "scope": "v4 focuses on plaza and water assets only",
+  "logical_tile_size": [
+    64,
+    32
+  ],
+  "tile_sprite_canvas": [
+    96,
+    72
+  ],
+  "anchor": "bottom-center",
+  "transparent_background": true,
+  "included_groups": {
+    "plazas": [
+      "base",
+      "2 subtle base variants",
+      "4 straight edges",
+      "4 outer corners"
+    ],
+    "water": [
+      "4 center variants including a plain clean-water tile",
+      "4 edges",
+      "4 outer corners",
+      "4 inner corners",
+      "2 special decorated shores",
+      "2 ford/crossing tiles"
+    ]
+  },
+  "notes": [
+    "Built from new generated concept sheets in a Settlers-inspired style.",
+    "Plaza base tiles are intended as repeatable surfaces; edge and corner tiles are decorative border variants.",
+    "Water rock/reeds tiles are visual variants; ford tiles are intended as future walkable crossing candidates.",
+    "Added water_center_plain.png: clean open-water tile with no lilies, rocks, reeds, or shore content."
+  ]
+}
