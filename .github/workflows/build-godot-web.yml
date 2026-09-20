@@ -1,36 +1,52 @@
-name: Build Godot web test
+name: Build and deploy Godot Web to Pages
 
 on:
-  workflow_dispatch:
   push:
     branches: [main]
-    paths:
-      - "godot/**"
-      - ".github/workflows/build-godot-web.yml"
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
 
 jobs:
-  export-web:
+  build:
     runs-on: ubuntu-latest
     container:
       image: barichello/godot-ci:4.4
     steps:
-      - uses: actions/checkout@v4
-      - name: Import project
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Import Godot project
         run: godot --headless --editor --path godot --quit
-      - name: Export web build
+
+      - name: Export Web build
         run: |
-          mkdir -p godot-test
-          godot --headless --path godot --export-release Web ../godot-test/index.html
-          touch godot-test/.nojekyll
-      - name: Commit generated test version
-        run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f godot-test
-          if git diff --cached --quiet; then exit 0; fi
-          git commit -m "Build Godot web test [skip ci]"
-          git push
+          mkdir -p "$GITHUB_WORKSPACE/build"
+          godot --headless --path godot --export-release Web "$GITHUB_WORKSPACE/build/index.html"
+          touch "$GITHUB_WORKSPACE/build/.nojekyll"
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
