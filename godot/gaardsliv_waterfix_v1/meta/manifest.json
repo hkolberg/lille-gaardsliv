@@ -1,0 +1,44 @@
+{
+  "version": "waterfix-1.1",
+  "purpose": "Water assets normalized to the actual game grid and renderer mapping",
+  "logical_tile_size": [
+    64,
+    32
+  ],
+  "tile_sprite_canvas": [
+    96,
+    72
+  ],
+  "logical_diamond_points": {
+    "N": [
+      48,
+      36
+    ],
+    "E": [
+      80,
+      52
+    ],
+    "S": [
+      48,
+      68
+    ],
+    "W": [
+      16,
+      52
+    ]
+  },
+  "anchor": "bottom-center",
+  "transparent_background": true,
+  "renderer_direction_mapping": {
+    "grid_N": "asset_E",
+    "grid_E": "asset_S",
+    "grid_S": "asset_W",
+    "grid_W": "asset_N"
+  },
+  "usage": {
+    "interior_default": "water/base/water_center_plain.png",
+    "shorelines": "choose strictly from topology",
+    "variants": "optional sparse decoration only",
+    "fords": "future traversable special tiles, not enabled yet"
+  }
+}
