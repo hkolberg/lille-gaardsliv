@@ -140,17 +140,27 @@ func _screen_to_grid(p: Vector2) -> Vector2:
 
 func _process(delta: float) -> void:
 	var input := Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	var walk_speed := _walking_speed_at(player_grid)
 	if input.length() > 0.0:
 		has_target = false
 		# Screen-direction movement feels natural in an isometric view.
-		_try_move_screen(input.normalized() * WALK_SPEED * delta)
+		_try_move_screen(input.normalized() * walk_speed * delta)
 	elif has_target:
 		var d := player_screen.direction_to(target_screen)
 		if player_screen.distance_to(target_screen) > 5.0:
-			_try_move_screen(d * WALK_SPEED * delta)
+			_try_move_screen(d * walk_speed * delta)
 		else:
 			has_target = false
 	queue_redraw()
+
+func _walking_speed_at(pos: Vector2) -> float:
+	var x := clampi(int(floor(pos.x)), 0, GRID_W - 1)
+	var y := clampi(int(floor(pos.y)), 0, GRID_H - 1)
+	var walking: Dictionary = tiles[y][x].movement.walking
+	if not walking.traversable:
+		return 0.0
+	var cost := float(walking.get("cost", 1.0))
+	return WALK_SPEED / maxf(cost, 0.01)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
