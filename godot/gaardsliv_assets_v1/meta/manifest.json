@@ -1,0 +1,111 @@
+{
+  "version": "1.0",
+  "logical_tile_size": [
+    64,
+    32
+  ],
+  "tile_sprite_canvas": [
+    96,
+    72
+  ],
+  "prop_sprite_canvas": [
+    96,
+    112
+  ],
+  "anchor": "bottom-center",
+  "connections": {
+    "N": [
+      48,
+      36
+    ],
+    "E": [
+      80,
+      52
+    ],
+    "S": [
+      48,
+      68
+    ],
+    "W": [
+      16,
+      52
+    ]
+  },
+  "note": "v1 extraction from approved visual atlas; transparent PNGs normalized to a common canvas. Use logical 64x32 footprint for placement; fences/gates/props are overlays.",
+  "assets": [
+    "terrain/terrain_grass.png",
+    "terrain/terrain_meadow.png",
+    "terrain/terrain_field_plowed.png",
+    "terrain/terrain_crop_growing.png",
+    "terrain/terrain_crop_mature.png",
+    "terrain/terrain_forest_deciduous.png",
+    "terrain/terrain_forest_pine.png",
+    "terrain/terrain_rock.png",
+    "terrain/terrain_sand.png",
+    "terrain/terrain_water.png",
+    "roads/cobblestone/road_cobble_ns.png",
+    "roads/cobblestone/road_cobble_ew.png",
+    "roads/cobblestone/road_cobble_ne.png",
+    "roads/cobblestone/road_cobble_nw.png",
+    "roads/cobblestone/road_cobble_se.png",
+    "roads/cobblestone/road_cobble_sw.png",
+    "roads/cobblestone/road_cobble_t_n.png",
+    "roads/cobblestone/road_cobble_t_e.png",
+    "roads/cobblestone/road_cobble_t_s.png",
+    "roads/cobblestone/road_cobble_t_w.png",
+    "roads/cobblestone/road_cobble_cross.png",
+    "roads/gravel/road_gravel_ns.png",
+    "roads/gravel/road_gravel_ew.png",
+    "roads/gravel/road_gravel_ne.png",
+    "roads/gravel/road_gravel_nw.png",
+    "roads/gravel/road_gravel_se.png",
+    "roads/gravel/road_gravel_sw.png",
+    "roads/gravel/road_gravel_t_n.png",
+    "roads/gravel/road_gravel_t_e.png",
+    "roads/gravel/road_gravel_t_s.png",
+    "roads/gravel/road_gravel_t_w.png",
+    "roads/gravel/road_gravel_cross.png",
+    "plazas/plaza_cobble.png",
+    "plazas/plaza_dirt.png",
+    "plazas/plaza_market.png",
+    "plazas/plaza_pattern1.png",
+    "plazas/plaza_pattern2.png",
+    "water/water_shore_rock.png",
+    "water/water_shore_sand.png",
+    "water/water_shore_reed.png",
+    "water/water_river.png",
+    "water/water_bridge.png",
+    "fences/fence_n.png",
+    "fences/fence_s.png",
+    "fences/fence_e.png",
+    "fences/fence_w.png",
+    "fences/fence_corner_ne.png",
+    "fences/fence_corner_nw.png",
+    "fences/fence_corner_es.png",
+    "fences/fence_corner_se.png",
+    "fences/fence_corner_sw.png",
+    "fences/fence_segment.png",
+    "gates/gate_wood_n.png",
+    "gates/gate_wood_e.png",
+    "gates/gate_stone_n.png",
+    "gates/gate_stone_e.png",
+    "props/tree_oak.png",
+    "props/tree_birch.png",
+    "props/tree_pine.png",
+    "props/bush_green.png",
+    "props/bush_flower.png",
+    "props/flowers_white.png",
+    "props/flowers_yellow.png",
+    "props/rock_small.png",
+    "props/rock_large.png",
+    "props/stump.png",
+    "props/sign_post.png",
+    "props/well.png",
+    "props/bench.png",
+    "props/cart.png",
+    "props/barrel.png",
+    "props/crate.png",
+    "props/crate_large.png",
+    "props/prop_box.png"
+  ]
+}
