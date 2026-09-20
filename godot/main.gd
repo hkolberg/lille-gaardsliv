@@ -106,10 +106,10 @@ func _tile(category: String, surface: String, connections: int) -> Dictionary:
 	}
 
 func _movement_for(category: String, surface: String) -> Dictionary:
-	var walk_cost := 1.0
-	if surface == "gravel": walk_cost = 0.9
-	elif surface == "cobblestone" or surface == "cobblestone_square": walk_cost = 0.8
-	elif category == "forest": walk_cost = 1.5
+	var walk_cost := 2.0
+	if surface == "gravel": walk_cost = 1.3
+	elif surface == "cobblestone" or surface == "cobblestone_square": walk_cost = 1.0
+	elif category == "forest": walk_cost = 3.0
 	return {
 		"walking": {"traversable": true, "cost": walk_cost},
 		"tractor": {"traversable": category != "forest"},
