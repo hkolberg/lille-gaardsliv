@@ -11,6 +11,7 @@ const WALK_SPEED := 110.0
 const ASSET_ROOT_V1 := "res://gaardsliv_assets_v1/"
 const ASSET_ROOT_V2 := "res://gaardsliv_assets_v2/"
 const ASSET_ROOT_V3 := "res://gaardsliv_assets_v3/"
+const ASSET_ROOT_V4 := "res://gaardsliv_assets_v4/"
 const TILE_TEXTURE_ORIGIN := Vector2(48.0, 52.0)
 const PROP_TEXTURE_ORIGIN := Vector2(48.0, 108.0)
 
@@ -67,24 +68,41 @@ func _load_asset_textures() -> void:
 		"grass": load(ASSET_ROOT_V1 + "terrain/terrain_grass.png"),
 		"tree_oak": load(ASSET_ROOT_V1 + "props/tree_oak.png"),
 
-		# v3 visual replacement assets.
+		# v3 remains the source for forest visuals.
 		"tree_pine": load(ASSET_ROOT_V3 + "props/tree_pine.png"),
 		"tree_pine_large_a": load(ASSET_ROOT_V3 + "props/tree_pine_large_a.png"),
 		"tree_pine_medium_a": load(ASSET_ROOT_V3 + "props/tree_pine_medium_a.png"),
 		"tree_pine_small_a": load(ASSET_ROOT_V3 + "props/tree_pine_small_a.png"),
 		"forest_cluster_a": load(ASSET_ROOT_V3 + "props/forest_cluster_a.png"),
 		"forest_cluster_b": load(ASSET_ROOT_V3 + "props/forest_cluster_b.png"),
-		"plaza_cobble_v3": load(ASSET_ROOT_V3 + "plazas/plaza_cobble.png"),
-		"water_center_v3": load(ASSET_ROOT_V3 + "water/water_center.png"),
-		"water_reeds_n_v3": load(ASSET_ROOT_V3 + "water/water_reeds_n.png"),
-		"water_reeds_w_v3": load(ASSET_ROOT_V3 + "water/water_reeds_w.png"),
-		"water_shore_ne_v3": load(ASSET_ROOT_V3 + "water/water_shore_ne.png"),
-		"water_shore_sw_v3": load(ASSET_ROOT_V3 + "water/water_shore_sw.png"),
-		"water_rock_v3": load(ASSET_ROOT_V3 + "water/water_rock.png"),
-		"water_rock_reeds_v3": load(ASSET_ROOT_V3 + "water/water_rock_reeds.png")
+
+		# v4 plaza bases: intentionally no edge/corner decorations yet.
+		"plaza_base_v4": load(ASSET_ROOT_V4 + "plazas/plaza_base.png"),
+		"plaza_variant_01_v4": load(ASSET_ROOT_V4 + "plazas/plaza_variant_01.png"),
+		"plaza_variant_02_v4": load(ASSET_ROOT_V4 + "plazas/plaza_variant_02.png"),
+
+		# v4 open-water bases.
+		"water_plain_v4": load(ASSET_ROOT_V4 + "water/base/water_center_plain.png"),
+		"water_center_v4": load(ASSET_ROOT_V4 + "water/base/water_center.png"),
+		"water_rocks_v4": load(ASSET_ROOT_V4 + "water/base/water_center_rocks.png"),
+		"water_reeds_v4": load(ASSET_ROOT_V4 + "water/base/water_center_reeds.png")
 	}
 
-	# Keep v2 textures loaded only as emergency fallback during v3 validation.
+	for suffix in ["n", "e", "s", "w", "ne", "nw", "se", "sw"]:
+		var prefix := "water_edge_" if suffix.length() == 1 else "water_corner_"
+		asset_textures["water_shore_%s_v4" % suffix] = load(
+			ASSET_ROOT_V4 + "water/shores/%s%s.png" % [prefix, suffix]
+		)
+
+	for suffix in ["ne", "nw", "se", "sw"]:
+		asset_textures["water_inner_%s_v4" % suffix] = load(
+			ASSET_ROOT_V4 + "water/shores/water_inner_%s.png" % suffix
+		)
+
+	asset_textures["water_edge_n_rocks_v4"] = load(ASSET_ROOT_V4 + "water/shores/water_edge_n_rocks.png")
+	asset_textures["water_edge_e_reeds_v4"] = load(ASSET_ROOT_V4 + "water/shores/water_edge_e_reeds.png")
+
+	# Keep v2 road textures available as emergency fallback while roads remain geometric.
 	for prefix in ["cobble", "gravel"]:
 		var folder := "cobblestone" if prefix == "cobble" else "gravel"
 		for suffix in ["ns", "ew", "ne", "nw", "se", "sw", "t_n", "t_e", "t_s", "t_w", "cross"]:
@@ -451,26 +469,39 @@ func _is_water(x: int, y: int) -> bool:
 	return x >= 0 and y >= 0 and x < GRID_W and y < GRID_H and tiles[y][x].category == "water"
 
 func _water_texture_key(x: int, y: int) -> String:
-	var north_land := not _is_water(x, y - 1)
-	var east_land := not _is_water(x + 1, y)
-	var south_land := not _is_water(x, y + 1)
-	var west_land := not _is_water(x - 1, y)
+	# Land-neighbour mask in game-grid directions.
+	var land_mask := 0
+	if not _is_water(x, y - 1): land_mask |= Dir.N
+	if not _is_water(x + 1, y): land_mask |= Dir.E
+	if not _is_water(x, y + 1): land_mask |= Dir.S
+	if not _is_water(x - 1, y): land_mask |= Dir.W
 
-	# v3 currently contains a selected set of shoreline illustrations.
-	# Use the closest matching visual variant and fall back to centre water.
-	if north_land and east_land:
-		return "water_shore_ne_v3"
-	if south_land and west_land:
-		return "water_shore_sw_v3"
-	if north_land:
-		return "water_reeds_n_v3"
-	if west_land:
-		return "water_reeds_w_v3"
-	if east_land and south_land:
-		return "water_rock_reeds_v3"
-	if east_land or south_land:
-		return "water_rock_v3"
-	return "water_center_v3"
+	# V4 art labels follow the sprite diamond, which is rotated relative to grid neighbours.
+	var asset_mask := _grid_mask_to_asset_mask(land_mask)
+
+	match asset_mask:
+		Dir.N: return "water_shore_n_v4"
+		Dir.E: return "water_shore_e_v4"
+		Dir.S: return "water_shore_s_v4"
+		Dir.W: return "water_shore_w_v4"
+		Dir.N | Dir.E: return "water_shore_ne_v4"
+		Dir.N | Dir.W: return "water_shore_nw_v4"
+		Dir.S | Dir.E: return "water_shore_se_v4"
+		Dir.S | Dir.W: return "water_shore_sw_v4"
+
+	# Interior water defaults to the new clean tile. A few deterministic cells
+	# get rocks/reeds as visual variation without affecting traversability.
+	if land_mask == 0:
+		var variant := (x * 17 + y * 31) % 12
+		if variant == 0:
+			return "water_rocks_v4"
+		elif variant == 1:
+			return "water_reeds_v4"
+		return "water_plain_v4"
+
+	# Opposite or 3/4-sided land combinations do not yet have a dedicated
+	# single v4 shoreline tile. Plain water is safer than a mismatched collage.
+	return "water_plain_v4"
 
 func _draw_forest_prop(x: int, y: int) -> void:
 	var c := _iso(x, y)
@@ -521,7 +552,15 @@ func _draw_road(x: int, y: int, tile: Dictionary) -> void:
 	var c := _iso(x, y)
 
 	if tile.surface == "cobblestone_square":
-		_draw_asset(asset_textures.get("plaza_cobble_v3"), c)
+		# Repeat only clean v4 base tiles. Decorative plaza borders stay disabled
+		# until the base surface is visually verified as seamless.
+		var plaza_variant := (x * 5 + y * 7) % 9
+		var plaza_key := "plaza_base_v4"
+		if plaza_variant == 0:
+			plaza_key = "plaza_variant_01_v4"
+		elif plaza_variant == 1:
+			plaza_key = "plaza_variant_02_v4"
+		_draw_asset(asset_textures.get(plaza_key), c)
 		return
 
 	# Keep exact grid geometry until the v3 road crop directions are visually verified.
