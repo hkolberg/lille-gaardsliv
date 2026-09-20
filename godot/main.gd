@@ -7,7 +7,7 @@ const GRID_H := 20
 const TILE_W := 64.0
 const TILE_H := 32.0
 const ORIGIN := Vector2(576, 70)
-const WALK_SPEED := 145.0
+const WALK_SPEED := 110.0
 
 enum Dir { N = 1, E = 2, S = 4, W = 8 }
 
