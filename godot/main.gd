@@ -17,6 +17,7 @@ const ASSET_ROOT_WATER_V2 := "res://gaardsliv_water_assets_v2/"
 const ASSET_ROOT_STRAIGHT_SHORES := "res://gaardsliv_straight_shore_edges_v1/"
 const TILE_TEXTURE_ORIGIN := Vector2(48.0, 52.0)
 const PROP_TEXTURE_ORIGIN := Vector2(48.0, 108.0)
+const STRAIGHT_SHORE_SOURCE := Rect2(2.0, 2.0, 92.0, 68.0)
 
 enum Dir { N = 1, E = 2, S = 4, W = 8 }
 
@@ -126,47 +127,32 @@ func _build_world() -> void:
 	tiles.clear()
 	fences.clear()
 
-	# Water topology test world: grass base plus four deliberately different
-	# water bodies. Roads, forests, fences and plaza are omitted so shoreline
-	# continuity can be judged without visual noise.
+	# Clean shoreline validation world. Each lake uses only topology that is
+	# currently supported by verified art: interior (0 land sides), straight
+	# bank (1 land side), and convex corner (2 adjacent land sides).
 	for y in GRID_H:
 		var row: Array = []
 		for x in GRID_W:
 			row.append(_tile("meadow", "grass", 0))
 		tiles.append(row)
 
-	# Lake 1: compact rounded pond (upper-left).
-	_set_water_row(2, 3, 5)
-	_set_water_row(3, 2, 6)
-	_set_water_row(4, 2, 6)
-	_set_water_row(5, 3, 5)
+	# Lake 1: compact square pond.
+	_fill_water_rect(2, 2, 5, 5)
 
-	# Lake 2: larger lake with long straight banks (upper-right).
-	_set_water_row(2, 12, 16)
-	_set_water_row(3, 11, 17)
-	_set_water_row(4, 11, 17)
-	_set_water_row(5, 11, 17)
-	_set_water_row(6, 11, 17)
-	_set_water_row(7, 12, 16)
+	# Lake 2: broad lake with long straight banks.
+	_fill_water_rect(10, 2, 17, 6)
 
-	# Lake 3: long, narrow river-like body (lower-left).
-	_set_water_row(11, 2, 5)
-	_set_water_row(12, 2, 6)
-	_set_water_row(13, 3, 7)
-	_set_water_row(14, 4, 8)
-	_set_water_row(15, 5, 9)
+	# Lake 3: narrow, long lake.
+	_fill_water_rect(2, 11, 5, 17)
 
-	# Lake 4: irregular organic lake (lower-right).
-	_set_water_row(11, 13, 16)
-	_set_water_row(12, 12, 17)
-	_set_water_row(13, 12, 18)
-	_set_water_row(14, 13, 18)
-	_set_water_row(15, 13, 17)
-	_set_water_row(16, 14, 16)
+	# Lake 4: large rectangular lake, useful for checking long continuous
+	# shoreline plus a substantial plain-water interior.
+	_fill_water_rect(11, 11, 17, 17)
 
-func _set_water_row(y: int, x0: int, x1: int) -> void:
-	for x in range(x0, x1 + 1):
-		tiles[y][x] = _tile("water", "water", 0)
+func _fill_water_rect(x0: int, y0: int, x1: int, y1: int) -> void:
+	for y in range(y0, y1 + 1):
+		for x in range(x0, x1 + 1):
+			tiles[y][x] = _tile("water", "water", 0)
 
 func _tile(category: String, surface: String, connections: int) -> Dictionary:
 	return {
@@ -445,6 +431,15 @@ func _draw_asset(texture: Texture2D, tile_center: Vector2) -> void:
 	if texture != null:
 		draw_texture(texture, tile_center - TILE_TEXTURE_ORIGIN)
 
+func _draw_straight_shore(texture: Texture2D, tile_center: Vector2) -> void:
+	if texture == null:
+		return
+	# The generated source sprites visually occupied almost the full 96x72
+	# canvas, while one logical game tile is only a 64x32 diamond. Crop the
+	# transparent fringe and map the artwork exactly onto that footprint.
+	var destination := Rect2(tile_center - Vector2(32.0, 16.0), Vector2(64.0, 32.0))
+	draw_texture_rect_region(texture, destination, STRAIGHT_SHORE_SOURCE)
+
 func _draw_tile(x: int, y: int, tile: Dictionary) -> void:
 	var c := _iso(x, y)
 	var grass: Texture2D = asset_textures.get("grass")
@@ -452,7 +447,11 @@ func _draw_tile(x: int, y: int, tile: Dictionary) -> void:
 
 	if tile.category == "water":
 		var water_key := _water_texture_key(x, y)
-		_draw_asset(asset_textures.get(water_key), c)
+		var water_texture: Texture2D = asset_textures.get(water_key)
+		if water_key.begins_with("water_straight_"):
+			_draw_straight_shore(water_texture, c)
+		else:
+			_draw_asset(water_texture, c)
 
 	# Fallback marker only if the base texture failed to load.
 	if grass == null:
@@ -646,4 +645,4 @@ func draw_ellipse(center: Vector2, radius: Vector2, color: Color) -> void:
 	draw_colored_polygon(pts, color)
 
 func _draw_ui() -> void:
-	draw_string(ThemeDB.fallback_font, Vector2(16,24), "Vann-test: 4 innsjøformer. Gå: WASD/piltaster. Dra/knip på mobil.", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
+	draw_string(ThemeDB.fallback_font, Vector2(16,24), "Vann-test: rettkanter + hjørner. 4 innsjøstørrelser. Dra/knip på mobil.", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
