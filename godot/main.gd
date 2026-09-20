@@ -14,6 +14,7 @@ const ASSET_ROOT_V3 := "res://gaardsliv_assets_v3/"
 const ASSET_ROOT_V4 := "res://gaardsliv_assets_v4/"
 const ASSET_ROOT_WATERFIX := "res://gaardsliv_waterfix_v1/"
 const ASSET_ROOT_WATER_V2 := "res://gaardsliv_water_assets_v2/"
+const ASSET_ROOT_STRAIGHT_SHORES := "res://gaardsliv_straight_shore_edges_v1/"
 const TILE_TEXTURE_ORIGIN := Vector2(48.0, 52.0)
 const PROP_TEXTURE_ORIGIN := Vector2(48.0, 108.0)
 
@@ -22,7 +23,7 @@ enum Dir { N = 1, E = 2, S = 4, W = 8 }
 var tiles: Array = []
 var asset_textures: Dictionary = {}
 var fences: Dictionary = {}
-var player_grid := Vector2(4.5, 4.5)
+var player_grid := Vector2(9.5, 9.5)
 var player_screen := Vector2.ZERO
 var target_screen := Vector2.ZERO
 var has_target := false
@@ -106,6 +107,13 @@ func _load_asset_textures() -> void:
 	asset_textures["water_rocks_large_v2"] = load(ASSET_ROOT_WATER_V2 + "water/variants/water_center_rocks_large.png")
 	asset_textures["water_rocks_cluster_v2"] = load(ASSET_ROOT_WATER_V2 + "water/variants/water_center_rocks_cluster.png")
 
+	# True single-side shoreline assets. Each follows exactly one slanted edge
+	# of the 64x32 isometric diamond.
+	asset_textures["water_straight_nw"] = load(ASSET_ROOT_STRAIGHT_SHORES + "water/straight_edges/water_edge_nw.png")
+	asset_textures["water_straight_ne"] = load(ASSET_ROOT_STRAIGHT_SHORES + "water/straight_edges/water_edge_ne.png")
+	asset_textures["water_straight_sw"] = load(ASSET_ROOT_STRAIGHT_SHORES + "water/straight_edges/water_edge_sw.png")
+	asset_textures["water_straight_se"] = load(ASSET_ROOT_STRAIGHT_SHORES + "water/straight_edges/water_edge_se.png")
+
 	# Keep v2 road textures available as emergency fallback while roads remain geometric.
 	for prefix in ["cobble", "gravel"]:
 		var folder := "cobblestone" if prefix == "cobble" else "gravel"
@@ -117,63 +125,48 @@ func _load_asset_textures() -> void:
 func _build_world() -> void:
 	tiles.clear()
 	fences.clear()
+
+	# Water topology test world: grass base plus four deliberately different
+	# water bodies. Roads, forests, fences and plaza are omitted so shoreline
+	# continuity can be judged without visual noise.
 	for y in GRID_H:
 		var row: Array = []
 		for x in GRID_W:
 			row.append(_tile("meadow", "grass", 0))
 		tiles.append(row)
 
-	# Northern forest with a meadow clearing.
-	for y in range(1, 7):
-		for x in range(1, 7):
-			if not (x in range(3, 6) and y in range(3, 6)):
-				tiles[y][x] = _tile("forest", "forest_floor", 0)
+	# Lake 1: compact rounded pond (upper-left).
+	_set_water_row(2, 3, 5)
+	_set_water_row(3, 2, 6)
+	_set_water_row(4, 2, 6)
+	_set_water_row(5, 3, 5)
 
-	# Eastern forest.
-	for y in range(2, 10):
-		for x in range(14, 19):
-			tiles[y][x] = _tile("forest", "forest_floor", 0)
+	# Lake 2: larger lake with long straight banks (upper-right).
+	_set_water_row(2, 12, 16)
+	_set_water_row(3, 11, 17)
+	_set_water_row(4, 11, 17)
+	_set_water_row(5, 11, 17)
+	_set_water_row(6, 11, 17)
+	_set_water_row(7, 12, 16)
 
-	# Southern meadow stays open. A fenced pasture occupies part of it.
-	_add_fence_rect(2, 12, 7, 17, Vector2i(4, 12))
+	# Lake 3: long, narrow river-like body (lower-left).
+	_set_water_row(11, 2, 5)
+	_set_water_row(12, 2, 6)
+	_set_water_row(13, 3, 7)
+	_set_water_row(14, 4, 8)
+	_set_water_row(15, 5, 9)
 
-	# Small pond in the south-east part of the example world.
-	# The irregular outline makes it read as a natural water body rather than a block.
-	for p in [
-		Vector2i(11, 17), Vector2i(12, 17),
-		Vector2i(10, 18), Vector2i(11, 18), Vector2i(12, 18), Vector2i(13, 18),
-		Vector2i(10, 19), Vector2i(11, 19), Vector2i(12, 19), Vector2i(13, 19)
-	]:
-		tiles[p.y][p.x] = _tile("water", "water", 0)
+	# Lake 4: irregular organic lake (lower-right).
+	_set_water_row(11, 13, 16)
+	_set_water_row(12, 12, 17)
+	_set_water_row(13, 12, 18)
+	_set_water_row(14, 13, 18)
+	_set_water_row(15, 13, 17)
+	_set_water_row(16, 14, 16)
 
-	# Smaller fenced meadow near the village, with a walking gate.
-	_add_fence_rect(13, 12, 17, 16, Vector2i(15, 12))
-
-	# Main cobblestone road: west -> village square -> south.
-	for x in range(0, 9):
-		tiles[9][x] = _tile("road", "cobblestone", Dir.E | Dir.W)
-	tiles[9][9] = _tile("road", "cobblestone", Dir.W | Dir.E | Dir.S)
-	for y in range(10, 20):
-		tiles[y][9] = _tile("road", "cobblestone", Dir.N | Dir.S)
-
-	# Village square, connected to the main road.
-	for y in range(7, 11):
-		for x in range(9, 13):
-			tiles[y][x] = _tile("road", "cobblestone_square", Dir.N | Dir.E | Dir.S | Dir.W)
-
-	# Gravel path north through forest clearing.
-	for y in range(1, 7):
-		tiles[y][8] = _tile("road", "gravel", Dir.N | Dir.S)
-	tiles[6][8] = _tile("road", "gravel", Dir.N | Dir.S)
-	tiles[7][8] = _tile("road", "gravel", Dir.N | Dir.E)
-	tiles[7][9] = _tile("road", "gravel", Dir.W | Dir.E)
-
-	# Gravel path east from square and then south beside fenced meadow.
-	for x in range(13, 18):
-		tiles[9][x] = _tile("road", "gravel", Dir.E | Dir.W)
-	tiles[9][18] = _tile("road", "gravel", Dir.W | Dir.S)
-	for y in range(10, 18):
-		tiles[y][18] = _tile("road", "gravel", Dir.N | Dir.S)
+func _set_water_row(y: int, x0: int, x1: int) -> void:
+	for x in range(x0, x1 + 1):
+		tiles[y][x] = _tile("water", "water", 0)
 
 func _tile(category: String, surface: String, connections: int) -> Dictionary:
 	return {
@@ -479,17 +472,23 @@ func _water_texture_key(x: int, y: int) -> String:
 	if not _is_water(x, y + 1): land_mask |= Dir.S
 	if not _is_water(x - 1, y): land_mask |= Dir.W
 
-	# The current v2 atlas labels were a first-pass packaging. Visual inspection
-	# shows water_edge_n/e/s/w are actually two-sided outer-corner banks:
-	#   edge_n = grid N+W
-	#   edge_e = grid N+E
-	#   edge_s = grid E+S
-	#   edge_w = grid S+W
-	# Use them only for those exact topologies. This prevents grass wedges from
-	# intruding into connected interior water.
+	# One land neighbour = a true straight shoreline.
+	# Grid neighbours map to the four slanted screen edges like this:
+	# N -> upper-right (NE), E -> lower-right (SE),
+	# S -> lower-left (SW), W -> upper-left (NW).
 	match land_mask:
 		0:
 			return "water_plain_v2"
+		Dir.N:
+			return "water_straight_ne"
+		Dir.E:
+			return "water_straight_se"
+		Dir.S:
+			return "water_straight_sw"
+		Dir.W:
+			return "water_straight_nw"
+
+		# Existing v2 visual assets are the four useful two-sided convex banks.
 		Dir.N | Dir.W:
 			return "water_shore_n_v2"
 		Dir.N | Dir.E:
@@ -499,9 +498,9 @@ func _water_texture_key(x: int, y: int) -> String:
 		Dir.S | Dir.W:
 			return "water_shore_w_v2"
 
-	# The atlas does not contain a trustworthy true single-edge shoreline yet.
-	# Plain water is intentionally safer for one-sided and complex cases than
-	# drawing a bank across an internal water connection.
+	# Narrow tips, opposite banks and concave cases do not yet have a verified
+	# matching structural asset. Plain water avoids drawing land through a
+	# connected water surface while keeping those cases visible for inspection.
 	return "water_plain_v2"
 
 func _draw_forest_prop(x: int, y: int) -> void:
@@ -647,4 +646,4 @@ func draw_ellipse(center: Vector2, radius: Vector2, color: Color) -> void:
 	draw_colored_polygon(pts, color)
 
 func _draw_ui() -> void:
-	draw_string(ThemeDB.fallback_font, Vector2(16,24), "Gå: WASD / piltaster. På mobil/nettbrett: trykk dit du vil gå.", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
+	draw_string(ThemeDB.fallback_font, Vector2(16,24), "Vann-test: 4 innsjøformer. Gå: WASD/piltaster. Dra/knip på mobil.", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
