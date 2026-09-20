@@ -472,20 +472,25 @@ func _water_texture_key(x: int, y: int) -> String:
 	if not _is_water(x - 1, y): land_mask |= Dir.W
 
 	# One land neighbour = a true straight shoreline.
-	# Grid neighbours map to the four slanted screen edges like this:
-	# N -> upper-right (NE), E -> lower-right (SE),
-	# S -> lower-left (SW), W -> upper-left (NW).
+	# IMPORTANT: the straight-edge package filenames are historical labels,
+	# not the visual side of the diamond. The PNGs have been inspected:
+	#   water_edge_nw = land on visual upper-right edge
+	#   water_edge_ne = land on visual upper-left edge
+	#   water_edge_sw = land on visual lower-right edge
+	#   water_edge_se = land on visual lower-left edge
+	# Grid neighbour N is upper-right on screen, E lower-right,
+	# S lower-left, W upper-left.
 	match land_mask:
 		0:
 			return "water_plain_v2"
 		Dir.N:
-			return "water_straight_ne"
-		Dir.E:
-			return "water_straight_se"
-		Dir.S:
-			return "water_straight_sw"
-		Dir.W:
 			return "water_straight_nw"
+		Dir.E:
+			return "water_straight_sw"
+		Dir.S:
+			return "water_straight_se"
+		Dir.W:
+			return "water_straight_ne"
 
 		# Existing v2 visual assets are the four useful two-sided convex banks.
 		Dir.N | Dir.W:
