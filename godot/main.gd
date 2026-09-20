@@ -404,21 +404,32 @@ func _draw() -> void:
 	# Scale only the game world. Keep UI text at a fixed readable size.
 	draw_set_transform(_view_origin(), 0.0, Vector2(view_zoom, view_zoom))
 
-	# 1. Ground layer.
+	# 1. Base terrain. Water cells intentionally draw NO grass base.
 	for y in GRID_H:
 		for x in GRID_W:
 			_draw_tile(x, y, tiles[y][x])
-	# 2. Roads and plazas use exact grid geometry.
+
+	# 2. Draw the complete water layer after all land tiles. This prevents the
+	# oversized grass sprites from neighbouring/base tiles from painting green
+	# seams across water that has already been drawn.
+	for y in GRID_H:
+		for x in GRID_W:
+			if tiles[y][x].category == "water":
+				_draw_water_tile(x, y)
+
+	# 3. Roads and plazas.
 	for y in GRID_H:
 		for x in GRID_W:
 			if tiles[y][x].category == "road":
 				_draw_road(x, y, tiles[y][x])
-	# 3. Forest vegetation is a prop layer above the ground.
+
+	# 4. Forest vegetation.
 	for y in GRID_H:
 		for x in GRID_W:
 			if tiles[y][x].category == "forest":
 				_draw_forest_prop(x, y)
-	# 4. Edge overlays and player.
+
+	# 5. Edge overlays and player.
 	_draw_all_fences()
 	_draw_player()
 
@@ -461,23 +472,31 @@ func _draw_water_underlay(tile_center: Vector2) -> void:
 	draw_colored_polygon(diamond, Color("#176fb0"))
 
 func _draw_tile(x: int, y: int, tile: Dictionary) -> void:
+	# Water has its own dedicated render pass. Never place the grass sprite
+	# underneath a water cell; its oversized artwork overlaps neighbouring
+	# diamonds and was the source of the green grid inside lakes.
+	if tile.category == "water":
+		return
+
 	var c := _iso(x, y)
 	var grass: Texture2D = asset_textures.get("grass")
 	_draw_asset(grass, c)
 
-	if tile.category == "water":
-		_draw_water_underlay(c)
-		var water_key := _water_texture_key(x, y)
-		var water_texture: Texture2D = asset_textures.get(water_key)
-		_draw_water_asset(water_texture, c)
-
-	# Fallback marker only if the base texture failed to load.
 	if grass == null:
 		var diamond := PackedVector2Array([
 			c + Vector2(0, -TILE_H * 0.5), c + Vector2(TILE_W * 0.5, 0),
 			c + Vector2(0, TILE_H * 0.5), c + Vector2(-TILE_W * 0.5, 0)
 		])
 		draw_colored_polygon(diamond, Color("#79aa5b"))
+
+func _draw_water_tile(x: int, y: int) -> void:
+	var c := _iso(x, y)
+	# Solid logical diamond first, then the normalized visual asset.
+	# This also closes any soft/transparent pixels at the water texture edge.
+	_draw_water_underlay(c)
+	var water_key := _water_texture_key(x, y)
+	var water_texture: Texture2D = asset_textures.get(water_key)
+	_draw_water_asset(water_texture, c)
 
 func _is_water(x: int, y: int) -> bool:
 	return x >= 0 and y >= 0 and x < GRID_W and y < GRID_H and tiles[y][x].category == "water"
@@ -668,4 +687,4 @@ func draw_ellipse(center: Vector2, radius: Vector2, color: Color) -> void:
 	draw_colored_polygon(pts, color)
 
 func _draw_ui() -> void:
-	draw_string(ThemeDB.fallback_font, Vector2(16,24), "Vann-test: sammenhengende 64x32 vann-underflate + shoreline. Dra/knip på mobil.", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
+	draw_string(ThemeDB.fallback_font, Vector2(16,24), "Vann-test: eget vannlag uten gress under. Dra/knip på mobil.", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
