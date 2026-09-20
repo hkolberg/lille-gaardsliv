@@ -26,8 +26,10 @@ var has_target := false
 
 # Mobile/tablet view controls.
 var view_zoom := 1.0
+var view_pan := Vector2.ZERO
 var active_touches: Dictionary = {}
 var pinch_last_distance := 0.0
+var pinch_last_center := Vector2.ZERO
 var pinch_in_progress := false
 var block_tap_until_clear := false
 var tap_candidate_index := -1
@@ -273,6 +275,7 @@ func _handle_screen_touch(event: InputEventScreenTouch) -> void:
 			block_tap_until_clear = true
 			has_target = false
 			pinch_last_distance = _current_pinch_distance()
+			pinch_last_center = _current_pinch_center()
 	else:
 		# A single, stationary finger is still a tap-to-walk command.
 		if active_touches.size() == 1 and not block_tap_until_clear and event.index == tap_candidate_index and not tap_moved:
@@ -283,12 +286,16 @@ func _handle_screen_touch(event: InputEventScreenTouch) -> void:
 		if active_touches.size() < 2:
 			pinch_in_progress = false
 			pinch_last_distance = 0.0
+			pinch_last_center = Vector2.ZERO
 		if active_touches.is_empty():
 			block_tap_until_clear = false
 			tap_candidate_index = -1
 			tap_moved = false
 
 func _handle_screen_drag(event: InputEventScreenDrag) -> void:
+	# Preserve the previous two-finger gesture state before updating this touch.
+	var old_distance := _current_pinch_distance()
+	var old_center := _current_pinch_center()
 	active_touches[event.index] = event.position
 
 	if event.index == tap_candidate_index and event.position.distance_to(tap_start_position) > 12.0:
@@ -300,10 +307,29 @@ func _handle_screen_drag(event: InputEventScreenDrag) -> void:
 		has_target = false
 
 		var new_distance := _current_pinch_distance()
-		if pinch_last_distance > 0.001 and new_distance > 0.001:
-			var factor := new_distance / pinch_last_distance
-			view_zoom = clampf(view_zoom * factor, 0.55, 2.75)
+		var new_center := _current_pinch_center()
+
+		if old_distance > 0.001 and new_distance > 0.001:
+			# Keep the same world point under the gesture while the midpoint moves.
+			# This gives simultaneous pinch-zoom and two-finger panning.
+			var old_zoom := view_zoom
+			var old_origin := _base_view_origin(old_zoom) + view_pan
+			var world_under_gesture := (old_center - old_origin) / old_zoom
+
+			var factor := new_distance / old_distance
+			view_zoom = clampf(old_zoom * factor, 0.55, 2.75)
+
+			var new_base_origin := _base_view_origin(view_zoom)
+			view_pan = new_center - new_base_origin - world_under_gesture * view_zoom
+
 		pinch_last_distance = new_distance
+		pinch_last_center = new_center
+		queue_redraw()
+	elif tap_moved:
+		# A one-finger drag pans the map. Once the threshold has been crossed,
+		# releasing the finger will no longer issue a tap-to-walk command.
+		view_pan += event.relative
+		has_target = false
 		queue_redraw()
 
 func _current_pinch_distance() -> float:
@@ -314,9 +340,20 @@ func _current_pinch_distance() -> float:
 	var p2: Vector2 = active_touches[keys[1]]
 	return p1.distance_to(p2)
 
-func _view_origin() -> Vector2:
+func _current_pinch_center() -> Vector2:
+	if active_touches.size() < 2:
+		return Vector2.ZERO
+	var keys := active_touches.keys()
+	var p1: Vector2 = active_touches[keys[0]]
+	var p2: Vector2 = active_touches[keys[1]]
+	return (p1 + p2) * 0.5
+
+func _base_view_origin(zoom_value: float) -> Vector2:
 	var center := get_viewport_rect().size * 0.5
-	return center - center * view_zoom
+	return center - center * zoom_value
+
+func _view_origin() -> Vector2:
+	return _base_view_origin(view_zoom) + view_pan
 
 func _view_to_world(view_position: Vector2) -> Vector2:
 	return (view_position - _view_origin()) / view_zoom
