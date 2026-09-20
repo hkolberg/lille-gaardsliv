@@ -10,6 +10,7 @@ const ORIGIN := Vector2(576, 70)
 const WALK_SPEED := 110.0
 const ASSET_ROOT_V1 := "res://gaardsliv_assets_v1/"
 const ASSET_ROOT_V2 := "res://gaardsliv_assets_v2/"
+const ASSET_ROOT_V3 := "res://gaardsliv_assets_v3/"
 const TILE_TEXTURE_ORIGIN := Vector2(48.0, 52.0)
 const PROP_TEXTURE_ORIGIN := Vector2(48.0, 108.0)
 
@@ -49,35 +50,35 @@ func _add_key(action: String, key: Key) -> void:
 	InputMap.action_add_event(action, e)
 
 func _load_asset_textures() -> void:
-	# v1 remains the source for assets that v2 did not replace.
+	# v1 remains the source for base grass and oak.
 	asset_textures = {
 		"grass": load(ASSET_ROOT_V1 + "terrain/terrain_grass.png"),
 		"tree_oak": load(ASSET_ROOT_V1 + "props/tree_oak.png"),
 
-		# v2 repair assets.
-		"tree_pine": load(ASSET_ROOT_V2 + "props/tree_pine.png"),
-		"plaza_cobble": load(ASSET_ROOT_V2 + "roads/cobblestone/plaza_cobble_flat.png")
+		# v3 visual replacement assets.
+		"tree_pine": load(ASSET_ROOT_V3 + "props/tree_pine.png"),
+		"tree_pine_large_a": load(ASSET_ROOT_V3 + "props/tree_pine_large_a.png"),
+		"tree_pine_medium_a": load(ASSET_ROOT_V3 + "props/tree_pine_medium_a.png"),
+		"tree_pine_small_a": load(ASSET_ROOT_V3 + "props/tree_pine_small_a.png"),
+		"forest_cluster_a": load(ASSET_ROOT_V3 + "props/forest_cluster_a.png"),
+		"forest_cluster_b": load(ASSET_ROOT_V3 + "props/forest_cluster_b.png"),
+		"plaza_cobble_v3": load(ASSET_ROOT_V3 + "plazas/plaza_cobble.png"),
+		"water_center_v3": load(ASSET_ROOT_V3 + "water/water_center.png"),
+		"water_reeds_n_v3": load(ASSET_ROOT_V3 + "water/water_reeds_n.png"),
+		"water_reeds_w_v3": load(ASSET_ROOT_V3 + "water/water_reeds_w.png"),
+		"water_shore_ne_v3": load(ASSET_ROOT_V3 + "water/water_shore_ne.png"),
+		"water_shore_sw_v3": load(ASSET_ROOT_V3 + "water/water_shore_sw.png"),
+		"water_rock_v3": load(ASSET_ROOT_V3 + "water/water_rock.png"),
+		"water_rock_reeds_v3": load(ASSET_ROOT_V3 + "water/water_rock_reeds.png")
 	}
 
+	# Keep v2 textures loaded only as emergency fallback during v3 validation.
 	for prefix in ["cobble", "gravel"]:
 		var folder := "cobblestone" if prefix == "cobble" else "gravel"
 		for suffix in ["ns", "ew", "ne", "nw", "se", "sw", "t_n", "t_e", "t_s", "t_w", "cross"]:
-			asset_textures["road_%s_%s" % [prefix, suffix]] = load(
+			asset_textures["road_%s_%s_v2" % [prefix, suffix]] = load(
 				ASSET_ROOT_V2 + "roads/%s/road_%s_%s.png" % [folder, prefix, suffix]
 			)
-
-	for suffix in ["center", "n", "e", "s", "w", "ne", "nw", "se", "sw", "rock", "reeds"]:
-		asset_textures["water_%s" % suffix] = load(
-			ASSET_ROOT_V2 + "water/water_%s.png" % suffix
-		)
-
-	for suffix in ["n", "e", "s", "w"]:
-		asset_textures["fence_%s" % suffix] = load(
-			ASSET_ROOT_V2 + "fences/fence_%s.png" % suffix
-		)
-		asset_textures["gate_%s" % suffix] = load(
-			ASSET_ROOT_V2 + "gates/gate_%s.png" % suffix
-		)
 
 func _build_world() -> void:
 	tiles.clear()
@@ -336,35 +337,44 @@ func _is_water(x: int, y: int) -> bool:
 	return x >= 0 and y >= 0 and x < GRID_W and y < GRID_H and tiles[y][x].category == "water"
 
 func _water_texture_key(x: int, y: int) -> String:
-	# Build a mask of LAND edges in game-grid directions.
-	var land_mask := 0
-	if not _is_water(x, y - 1): land_mask |= Dir.N
-	if not _is_water(x + 1, y): land_mask |= Dir.E
-	if not _is_water(x, y + 1): land_mask |= Dir.S
-	if not _is_water(x - 1, y): land_mask |= Dir.W
+	var north_land := not _is_water(x, y - 1)
+	var east_land := not _is_water(x + 1, y)
+	var south_land := not _is_water(x, y + 1)
+	var west_land := not _is_water(x - 1, y)
 
-	# v2 filenames use sprite-diamond directions, rotated relative to grid dirs.
-	var asset_mask := _grid_mask_to_asset_mask(land_mask)
-	match asset_mask:
-		0: return "water_center"
-		Dir.N: return "water_n"
-		Dir.E: return "water_e"
-		Dir.S: return "water_s"
-		Dir.W: return "water_w"
-		Dir.N | Dir.E: return "water_ne"
-		Dir.N | Dir.W: return "water_nw"
-		Dir.S | Dir.E: return "water_se"
-		Dir.S | Dir.W: return "water_sw"
-	# Opposite edges / narrow tips do not yet have dedicated v2 sprites.
-	return "water_center"
+	# v3 currently contains a selected set of shoreline illustrations.
+	# Use the closest matching visual variant and fall back to centre water.
+	if north_land and east_land:
+		return "water_shore_ne_v3"
+	if south_land and west_land:
+		return "water_shore_sw_v3"
+	if north_land:
+		return "water_reeds_n_v3"
+	if west_land:
+		return "water_reeds_w_v3"
+	if east_land and south_land:
+		return "water_rock_reeds_v3"
+	if east_land or south_land:
+		return "water_rock_v3"
+	return "water_center_v3"
 
 func _draw_forest_prop(x: int, y: int) -> void:
 	var c := _iso(x, y)
-	var key := "tree_pine" if ((x * 3 + y * 5) % 4 == 0) else "tree_oak"
+	var selector := (x * 7 + y * 11) % 12
+	var key := "tree_oak"
+	if selector == 0:
+		key = "forest_cluster_a"
+	elif selector == 1:
+		key = "forest_cluster_b"
+	elif selector in [2, 3]:
+		key = "tree_pine_large_a"
+	elif selector in [4, 5]:
+		key = "tree_pine_medium_a"
+	elif selector == 6:
+		key = "tree_pine_small_a"
+
 	var texture: Texture2D = asset_textures.get(key)
 	if texture != null:
-		# Small deterministic offset avoids a rigid plantation look while
-		# keeping the tree foot inside its logical tile.
 		var offset := Vector2(float(((x + y * 2) % 5) - 2) * 2.0, float(((x * 2 + y) % 3) - 1))
 		draw_texture(texture, c + offset - PROP_TEXTURE_ORIGIN)
 
@@ -397,22 +407,14 @@ func _draw_road(x: int, y: int, tile: Dictionary) -> void:
 	var c := _iso(x, y)
 
 	if tile.surface == "cobblestone_square":
-		_draw_asset(asset_textures.get("plaza_cobble"), c)
+		_draw_asset(asset_textures.get("plaza_cobble_v3"), c)
 		return
 
-	var prefix := "gravel" if tile.surface == "gravel" else "cobble"
-	var asset_mask := _grid_mask_to_asset_mask(tile.connections)
-	var suffix := _road_suffix(asset_mask)
-	var texture: Texture2D = asset_textures.get("road_%s_%s" % [prefix, suffix])
-
-	if texture != null:
-		_draw_asset(texture, c)
+	# Keep exact grid geometry until the v3 road crop directions are visually verified.
+	if tile.surface == "gravel":
+		_draw_grid_road(c, tile.connections, 12.0, Color("#d4ad72"), Color("#a47c4e"))
 	else:
-		# Geometry fallback only if a v2 variant is missing.
-		if tile.surface == "gravel":
-			_draw_grid_road(c, tile.connections, 12.0, Color("#d4ad72"), Color("#a47c4e"))
-		else:
-			_draw_grid_road(c, tile.connections, 18.0, Color("#aaa59c"), Color("#77736e"))
+		_draw_grid_road(c, tile.connections, 18.0, Color("#aaa59c"), Color("#77736e"))
 
 func _draw_grid_road(c: Vector2, mask: int, width: float, fill: Color, edge: Color) -> void:
 	# Dark outer stroke then lighter surface gives a readable road edge
