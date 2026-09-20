@@ -632,9 +632,12 @@ func _draw_fence_edge(x: int, y: int, edge: int, gate: bool) -> void:
 		draw_line(a, b, Color("#8b5a31"), 3.0, true)
 
 func _draw_player() -> void:
-	draw_ellipse(player_screen + Vector2(0,7), Vector2(9,4), Color(0,0,0,.28))
-	draw_rect(Rect2(player_screen.x-6, player_screen.y-13, 12, 18), Color("#315fbb"), true)
-	draw_circle(player_screen + Vector2(0,-18), 7, Color("#edc39e"))
+	# player_screen is the exact foot/ground-contact point used by player_grid.
+	# Draw the body upward from this anchor so terrain lookup, movement cost,
+	# collision and the visible feet all refer to the same point.
+	draw_ellipse(player_screen + Vector2(0,3), Vector2(9,4), Color(0,0,0,.28))
+	draw_rect(Rect2(player_screen.x-6, player_screen.y-18, 12, 18), Color("#315fbb"), true)
+	draw_circle(player_screen + Vector2(0,-23), 7, Color("#edc39e"))
 
 func draw_ellipse(center: Vector2, radius: Vector2, color: Color) -> void:
 	var pts := PackedVector2Array()
