@@ -245,7 +245,7 @@ func _draw_connections(c: Vector2, mask: int, width: float, col: Color) -> void:
 
 func _draw_all_fences() -> void:
 	for key in fences:
-		var parts := key.split(",")
+		var parts: PackedStringArray = key.split(",")
 		var x := int(parts[0]); var y := int(parts[1]); var edge := int(parts[2])
 		var c := _iso(x, y)
 		var a: Vector2; var b: Vector2
