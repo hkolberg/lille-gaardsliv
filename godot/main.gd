@@ -446,12 +446,27 @@ func _draw_water_asset(texture: Texture2D, tile_center: Vector2) -> void:
 	var destination := Rect2(tile_center - Vector2(32.0, 16.0), Vector2(64.0, 32.0))
 	draw_texture_rect_region(texture, destination, source)
 
+func _draw_water_underlay(tile_center: Vector2) -> void:
+	# Always cover the complete logical 64x32 diamond before drawing textured
+	# water/shore art. Generated water sprites contain soft transparent pixels
+	# at their outer edge; without this underlay the grass base shows through
+	# as a green grid between adjacent water tiles.
+	var diamond := PackedVector2Array([
+		tile_center + Vector2(0.0, -TILE_H * 0.5),
+		tile_center + Vector2(TILE_W * 0.5, 0.0),
+		tile_center + Vector2(0.0, TILE_H * 0.5),
+		tile_center + Vector2(-TILE_W * 0.5, 0.0)
+	])
+	# Match the dominant mid-blue of the current water art.
+	draw_colored_polygon(diamond, Color("#176fb0"))
+
 func _draw_tile(x: int, y: int, tile: Dictionary) -> void:
 	var c := _iso(x, y)
 	var grass: Texture2D = asset_textures.get("grass")
 	_draw_asset(grass, c)
 
 	if tile.category == "water":
+		_draw_water_underlay(c)
 		var water_key := _water_texture_key(x, y)
 		var water_texture: Texture2D = asset_textures.get(water_key)
 		_draw_water_asset(water_texture, c)
@@ -653,4 +668,4 @@ func draw_ellipse(center: Vector2, radius: Vector2, color: Color) -> void:
 	draw_colored_polygon(pts, color)
 
 func _draw_ui() -> void:
-	draw_string(ThemeDB.fallback_font, Vector2(16,24), "Vann-test: alle vann-assets normalisert til 64x32. Dra/knip på mobil.", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
+	draw_string(ThemeDB.fallback_font, Vector2(16,24), "Vann-test: sammenhengende 64x32 vann-underflate + shoreline. Dra/knip på mobil.", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
