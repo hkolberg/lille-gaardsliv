@@ -1,0 +1,36 @@
+{
+  "version": "1.0",
+  "style": "Settlers-inspired isometric shoreline edges",
+  "description": "Four single-side straight shoreline assets following the four slanted diamond edges. Intended for long flat lake shores and riverbanks.",
+  "logical_tile_size": [
+    64,
+    32
+  ],
+  "tile_sprite_canvas": [
+    96,
+    72
+  ],
+  "anchor": "bottom-center",
+  "assets": [
+    {
+      "file": "water/straight_edges/water_edge_nw.png",
+      "meaning": "land follows the upper-left slanted side of the diamond"
+    },
+    {
+      "file": "water/straight_edges/water_edge_ne.png",
+      "meaning": "land follows the upper-right slanted side of the diamond"
+    },
+    {
+      "file": "water/straight_edges/water_edge_sw.png",
+      "meaning": "land follows the lower-left slanted side of the diamond"
+    },
+    {
+      "file": "water/straight_edges/water_edge_se.png",
+      "meaning": "land follows the lower-right slanted side of the diamond"
+    }
+  ],
+  "notes": [
+    "These are single-side straight shores only; they complement, not replace, corner tiles.",
+    "Orientation should be verified in-engine before permanent mapping."
+  ]
+}
