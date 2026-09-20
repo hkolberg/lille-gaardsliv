@@ -129,7 +129,7 @@ func _set_fence(x: int, y: int, edge: int, gate: bool) -> void:
 	fences["%d,%d,%d" % [x, y, edge]] = {"gate": gate}
 
 func _iso(x: int, y: int) -> Vector2:
-	return _iso_f(float(x), float(y))
+	return _iso_f(float(x) + 0.5, float(y) + 0.5)
 
 func _iso_f(x: float, y: float) -> Vector2:
 	return ORIGIN + Vector2((x - y) * TILE_W * 0.5, (x + y) * TILE_H * 0.5)
@@ -206,6 +206,11 @@ func _draw() -> void:
 	for y in GRID_H:
 		for x in GRID_W:
 			_draw_tile(x, y, tiles[y][x])
+	# Draw paths after every ground tile, so adjacent tiles cannot cover them.
+	for y in GRID_H:
+		for x in GRID_W:
+			if tiles[y][x].category == "road":
+				_draw_road(x, y, tiles[y][x])
 	_draw_all_fences()
 	_draw_player()
 	_draw_ui()
@@ -223,23 +228,29 @@ func _draw_tile(x: int, y: int, tile: Dictionary) -> void:
 	if tile.category == "forest":
 		draw_circle(c + Vector2(0,-8), 8, Color("#315f38"))
 		draw_line(c + Vector2(0,-2), c + Vector2(0,5), Color("#64462d"), 3)
-	elif tile.category == "road":
-		if tile.surface == "cobblestone_square":
-			draw_colored_polygon(diamond, Color("#aaa49a"))
-		else:
-			var width := 11.0 if tile.surface == "gravel" else 21.0
-			var col := Color("#c0a174") if tile.surface == "gravel" else Color("#9f9a91")
-			_draw_connections(c, tile.connections, width, col)
+
+func _draw_road(x: int, y: int, tile: Dictionary) -> void:
+	var c := _iso(x, y)
+	if tile.surface == "cobblestone_square":
+		draw_colored_polygon(PackedVector2Array([
+			_iso_f(x, y), _iso_f(x + 1, y),
+			_iso_f(x + 1, y + 1), _iso_f(x, y + 1)
+		]), Color("#aaa49a"))
+	else:
+		var width := 11.0 if tile.surface == "gravel" else 21.0
+		var col := Color("#c0a174") if tile.surface == "gravel" else Color("#9f9a91")
+		_draw_connections(c, tile.connections, width, col)
 
 func _edge_point(c: Vector2, d: int) -> Vector2:
 	match d:
-		Dir.N: return c + Vector2(0, -TILE_H * 0.5)
-		Dir.E: return c + Vector2(TILE_W * 0.5, 0)
-		Dir.S: return c + Vector2(0, TILE_H * 0.5)
-		Dir.W: return c + Vector2(-TILE_W * 0.5, 0)
+		Dir.N: return c + Vector2(TILE_W * 0.25, -TILE_H * 0.25)
+		Dir.E: return c + Vector2(TILE_W * 0.25, TILE_H * 0.25)
+		Dir.S: return c + Vector2(-TILE_W * 0.25, TILE_H * 0.25)
+		Dir.W: return c + Vector2(-TILE_W * 0.25, -TILE_H * 0.25)
 	return c
 
 func _draw_connections(c: Vector2, mask: int, width: float, col: Color) -> void:
+	draw_circle(c, width * 0.5, col)
 	for d in [Dir.N, Dir.E, Dir.S, Dir.W]:
 		if mask & d: draw_line(c, _edge_point(c, d), col, width, true)
 
@@ -247,19 +258,21 @@ func _draw_all_fences() -> void:
 	for key in fences:
 		var parts: PackedStringArray = key.split(",")
 		var x := int(parts[0]); var y := int(parts[1]); var edge := int(parts[2])
-		var c := _iso(x, y)
-		var a: Vector2; var b: Vector2
+		# The same integer grid edges used by floor() in collision checks.
+		var a := Vector2.ZERO
+		var b := Vector2.ZERO
 		match edge:
-			Dir.N: a = c + Vector2(-TILE_W*.5,0); b = c + Vector2(0,-TILE_H*.5)
-			Dir.E: a = c + Vector2(0,-TILE_H*.5); b = c + Vector2(TILE_W*.5,0)
-			Dir.S: a = c + Vector2(TILE_W*.5,0); b = c + Vector2(0,TILE_H*.5)
-			Dir.W: a = c + Vector2(0,TILE_H*.5); b = c + Vector2(-TILE_W*.5,0)
-		if fences[key].gate:
-			var mid := (a+b)*0.5
-			draw_line(a, a.lerp(mid,.55), Color("#704d2b"), 3)
-			draw_line(mid.lerp(b,.45), b, Color("#704d2b"), 3)
-		else:
-			draw_line(a, b, Color("#704d2b"), 3)
+			Dir.N: a = _iso_f(x, y); b = _iso_f(x + 1, y)
+			Dir.E: a = _iso_f(x + 1, y); b = _iso_f(x + 1, y + 1)
+			Dir.S: a = _iso_f(x, y + 1); b = _iso_f(x + 1, y + 1)
+			Dir.W: a = _iso_f(x, y); b = _iso_f(x, y + 1)
+		# A gate is an entirely open edge, matching its collision rule.
+		# End posts mark the entrance without drawing a barrier across it.
+		if not fences[key].gate:
+			draw_line(a, b, Color("#704d2b"), 3, true)
+		var post_color := Color("#ba925f") if fences[key].gate else Color("#704d2b")
+		draw_line(a, a + Vector2(0, -6), post_color, 3, true)
+		draw_line(b, b + Vector2(0, -6), post_color, 3, true)
 
 func _draw_player() -> void:
 	draw_ellipse(player_screen + Vector2(0,7), Vector2(9,4), Color(0,0,0,.28))
