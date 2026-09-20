@@ -143,10 +143,7 @@ func _process(delta: float) -> void:
 	var walk_speed := _walking_speed_at(player_grid)
 	if input.length() > 0.0:
 		has_target = false
-		# Keyboard input follows the actual isometric grid axes.
-		# This prevents gradual sideways drift when walking along a diagonal map axis.
-		var screen_direction := _grid_input_to_screen_direction(input)
-		_try_move_screen(screen_direction * walk_speed * delta)
+		_try_move_grid(input, walk_speed * delta)
 	elif has_target:
 		var d := player_screen.direction_to(target_screen)
 		if player_screen.distance_to(target_screen) > 5.0:
@@ -155,15 +152,29 @@ func _process(delta: float) -> void:
 			has_target = false
 	queue_redraw()
 
-func _grid_input_to_screen_direction(input: Vector2) -> Vector2:
-	# Grid X maps down-right/up-left; grid Y maps down-left/up-right.
-	# Converting through the same 2:1 projection used by _iso_f keeps motion
-	# exactly parallel to tile edges/road axes.
-	var screen_vector := Vector2(
-		(input.x - input.y) * TILE_W * 0.5,
-		(input.x + input.y) * TILE_H * 0.5
+func _try_move_grid(input: Vector2, screen_distance: float) -> void:
+	# Keyboard movement is accumulated in grid space, not screen space.
+	# This prevents floating-point round trips through _screen_to_grid() from
+	# slowly pulling diagonal movement away from the intended grid axis.
+	var raw_grid_dir := Vector2(input.x, input.y)
+	if raw_grid_dir == Vector2.ZERO:
+		return
+
+	# Determine how many grid units correspond to the requested screen distance
+	# for this exact direction under the 2:1 isometric projection.
+	var projected := Vector2(
+		(raw_grid_dir.x - raw_grid_dir.y) * TILE_W * 0.5,
+		(raw_grid_dir.x + raw_grid_dir.y) * TILE_H * 0.5
 	)
-	return screen_vector.normalized()
+	var projected_len := projected.length()
+	if projected_len <= 0.0001:
+		return
+
+	var grid_delta := raw_grid_dir * (screen_distance / projected_len)
+	var new_grid := player_grid + grid_delta
+	if _can_walk(player_grid, new_grid):
+		player_grid = new_grid
+		player_screen = _iso_f(player_grid.x, player_grid.y)
 
 func _walking_speed_at(pos: Vector2) -> float:
 	var x := clampi(int(floor(pos.x)), 0, GRID_W - 1)
