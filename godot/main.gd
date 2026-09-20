@@ -153,10 +153,14 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 func _try_move_grid(input: Vector2, screen_distance: float) -> void:
-	# Keyboard movement is accumulated in grid space, not screen space.
-	# This prevents floating-point round trips through _screen_to_grid() from
-	# slowly pulling diagonal movement away from the intended grid axis.
-	var raw_grid_dir := Vector2(input.x, input.y)
+	# Arrow/WASD directions are screen-relative:
+	# Up/down move vertically on screen, left/right horizontally.
+	# Combined keys therefore line up with the diagonal isometric tile axes.
+	# Motion is still accumulated directly in grid space to avoid drift.
+	var raw_grid_dir := Vector2(
+		input.x + input.y,
+		-input.x + input.y
+	)
 	if raw_grid_dir == Vector2.ZERO:
 		return
 
