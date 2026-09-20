@@ -1,0 +1,24 @@
+{
+  "version": "3.0",
+  "source": "Approved initial v2 concept images, re-cut into individual game assets",
+  "style": "Settlers-inspired hand-painted isometric countryside",
+  "logical_tile_size": [
+    64,
+    32
+  ],
+  "tile_sprite_canvas": [
+    96,
+    72
+  ],
+  "prop_sprite_canvas": [
+    96,
+    112
+  ],
+  "anchor": "bottom-center",
+  "transparent_background": true,
+  "notes": [
+    "V3 replaces the simplified procedural-looking V2 repair art.",
+    "Roads, water, fences/gates and pine trees are extracted from the approved visual concept sheets.",
+    "Road/fence orientation names must be verified in-engine before deleting all fallbacks."
+  ]
+}
