@@ -479,31 +479,29 @@ func _water_texture_key(x: int, y: int) -> String:
 	if not _is_water(x, y + 1): land_mask |= Dir.S
 	if not _is_water(x - 1, y): land_mask |= Dir.W
 
-	# Current renderer uses the established grid-to-asset rotation.
-	var asset_mask := _grid_mask_to_asset_mask(land_mask)
-
-	match asset_mask:
+	# The current v2 atlas labels were a first-pass packaging. Visual inspection
+	# shows water_edge_n/e/s/w are actually two-sided outer-corner banks:
+	#   edge_n = grid N+W
+	#   edge_e = grid N+E
+	#   edge_s = grid E+S
+	#   edge_w = grid S+W
+	# Use them only for those exact topologies. This prevents grass wedges from
+	# intruding into connected interior water.
+	match land_mask:
 		0:
-			# Mostly plain water; occasional interior decoration only.
-			var variant := (x * 19 + y * 37) % 20
-			if variant == 0:
-				return "water_rocks_small_v2"
-			elif variant == 1:
-				return "water_reeds_v2"
-			elif variant == 2:
-				return "water_lilies_v2"
 			return "water_plain_v2"
-		Dir.N: return "water_shore_n_v2"
-		Dir.E: return "water_shore_e_v2"
-		Dir.S: return "water_shore_s_v2"
-		Dir.W: return "water_shore_w_v2"
-		Dir.N | Dir.E: return "water_shore_ne_v2"
-		Dir.N | Dir.W: return "water_shore_nw_v2"
-		Dir.S | Dir.E: return "water_shore_se_v2"
-		Dir.S | Dir.W: return "water_shore_sw_v2"
+		Dir.N | Dir.W:
+			return "water_shore_n_v2"
+		Dir.N | Dir.E:
+			return "water_shore_e_v2"
+		Dir.E | Dir.S:
+			return "water_shore_s_v2"
+		Dir.S | Dir.W:
+			return "water_shore_w_v2"
 
-	# Opposite-edge and 3/4-edge cases are deliberately conservative until
-	# these atlas directions have been visually verified in gameplay.
+	# The atlas does not contain a trustworthy true single-edge shoreline yet.
+	# Plain water is intentionally safer for one-sided and complex cases than
+	# drawing a bank across an internal water connection.
 	return "water_plain_v2"
 
 func _draw_forest_prop(x: int, y: int) -> void:
