@@ -299,15 +299,17 @@ func _draw_asset(texture: Texture2D, tile_center: Vector2) -> void:
 
 func _draw_tile(x: int, y: int, tile: Dictionary) -> void:
 	var c := _iso(x, y)
-	var texture: Texture2D = asset_textures.get("grass")
-	if tile.category == "forest":
-		texture = asset_textures.get("forest")
-	elif tile.category == "water":
-		texture = asset_textures.get("water")
-	_draw_asset(texture, c)
+	var grass: Texture2D = asset_textures.get("grass")
+	_draw_asset(grass, c)
 
-	# Fallback marker only if a texture failed to load.
-	if texture == null:
+	# Forest art is an overlay with transparent areas, so it must sit on grass.
+	if tile.category == "forest":
+		_draw_asset(asset_textures.get("forest"), c)
+	elif tile.category == "water":
+		_draw_asset(asset_textures.get("water"), c)
+
+	# Fallback marker only if the base texture failed to load.
+	if grass == null:
 		var diamond := PackedVector2Array([
 			c + Vector2(0, -TILE_H * 0.5), c + Vector2(TILE_W * 0.5, 0),
 			c + Vector2(0, TILE_H * 0.5), c + Vector2(-TILE_W * 0.5, 0)
@@ -335,13 +337,24 @@ func _draw_road(x: int, y: int, tile: Dictionary) -> void:
 		_draw_asset(asset_textures.get("plaza_cobble"), c)
 		return
 
-	var suffix := _road_suffix(tile.connections)
-	var prefix := "gravel" if tile.surface == "gravel" else "cobble"
-	var texture: Texture2D = asset_textures.get("road_%s_%s" % [prefix, suffix])
-	_draw_asset(texture, c)
+	# The v1 source atlas has several filename/orientation mismatches.
+	# Use the visually verified straight pieces; render bends/junctions procedurally
+	# until those source sprites are repaired instead of showing the wrong art.
+	var texture: Texture2D = null
+	if tile.surface == "cobblestone":
+		if tile.connections == (Dir.E | Dir.W):
+			texture = asset_textures.get("road_cobble_nw")
+		elif tile.connections == (Dir.N | Dir.S):
+			texture = asset_textures.get("road_cobble_ne")
+	elif tile.surface == "gravel":
+		if tile.connections == (Dir.E | Dir.W):
+			texture = asset_textures.get("road_gravel_ns")
+		elif tile.connections == (Dir.N | Dir.S):
+			texture = asset_textures.get("road_gravel_ne")
 
-	# Procedural fallback if a connection variant is missing.
-	if texture == null:
+	if texture != null:
+		_draw_asset(texture, c)
+	else:
 		var width := 11.0 if tile.surface == "gravel" else 21.0
 		var col := Color("#c0a174") if tile.surface == "gravel" else Color("#9f9a91")
 		_draw_connections(c, tile.connections, width, col)
@@ -366,45 +379,40 @@ func _draw_all_fences() -> void:
 		var y := int(parts[1])
 		var edge := int(parts[2])
 		var gate := bool(fences[key].gate)
-		var draw_x := x
-		var draw_y := y
-		var texture_key := ""
+		_draw_fence_edge(x, y, edge, gate)
 
-		# Gate art exists for N and E. S/W are the same physical boundary
-		# rendered from the neighboring tile's N/E overlay.
-		if gate:
-			match edge:
-				Dir.N:
-					texture_key = "gate_n"
-				Dir.E:
-					texture_key = "gate_e"
-				Dir.S:
-					draw_y += 1
-					texture_key = "gate_n"
-				Dir.W:
-					draw_x -= 1
-					texture_key = "gate_e"
-		else:
-			match edge:
-				Dir.N: texture_key = "fence_n"
-				Dir.E: texture_key = "fence_e"
-				Dir.S: texture_key = "fence_s"
-				Dir.W: texture_key = "fence_w"
+func _draw_fence_edge(x: int, y: int, edge: int, gate: bool) -> void:
+	var a := Vector2.ZERO
+	var b := Vector2.ZERO
+	match edge:
+		Dir.N: a = _iso_f(x, y); b = _iso_f(x + 1, y)
+		Dir.E: a = _iso_f(x + 1, y); b = _iso_f(x + 1, y + 1)
+		Dir.S: a = _iso_f(x, y + 1); b = _iso_f(x + 1, y + 1)
+		Dir.W: a = _iso_f(x, y); b = _iso_f(x, y + 1)
 
-		var texture: Texture2D = asset_textures.get(texture_key)
-		_draw_asset(texture, _iso(draw_x, draw_y))
+	var post_col := Color("#6f4526")
+	var rail_col := Color("#8b5a31")
+	var post_h := Vector2(0, -11)
+	var rail_h1 := Vector2(0, -4)
+	var rail_h2 := Vector2(0, -8)
 
-		# Procedural fallback if an overlay texture is unavailable.
-		if texture == null:
-			var a := Vector2.ZERO
-			var b := Vector2.ZERO
-			match edge:
-				Dir.N: a = _iso_f(x, y); b = _iso_f(x + 1, y)
-				Dir.E: a = _iso_f(x + 1, y); b = _iso_f(x + 1, y + 1)
-				Dir.S: a = _iso_f(x, y + 1); b = _iso_f(x + 1, y + 1)
-				Dir.W: a = _iso_f(x, y); b = _iso_f(x, y + 1)
-			if not gate:
-				draw_line(a, b, Color("#704d2b"), 3, true)
+	# Posts always sit exactly on the tile boundary endpoints.
+	draw_line(a, a + post_h, post_col, 3.0, true)
+	draw_line(b, b + post_h, post_col, 3.0, true)
+
+	if gate:
+		# Leave a visible opening in the centre while keeping gate posts.
+		var g1 := a.lerp(b, 0.34)
+		var g2 := a.lerp(b, 0.66)
+		draw_line(g1, g1 + post_h, post_col, 3.0, true)
+		draw_line(g2, g2 + post_h, post_col, 3.0, true)
+		draw_line(a + rail_h1, g1 + rail_h1, rail_col, 2.2, true)
+		draw_line(a + rail_h2, g1 + rail_h2, rail_col, 2.0, true)
+		draw_line(g2 + rail_h1, b + rail_h1, rail_col, 2.2, true)
+		draw_line(g2 + rail_h2, b + rail_h2, rail_col, 2.0, true)
+	else:
+		draw_line(a + rail_h1, b + rail_h1, rail_col, 2.2, true)
+		draw_line(a + rail_h2, b + rail_h2, rail_col, 2.0, true)
 
 func _draw_player() -> void:
 	draw_ellipse(player_screen + Vector2(0,7), Vector2(9,4), Color(0,0,0,.28))
