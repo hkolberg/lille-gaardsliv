@@ -24,6 +24,16 @@ var player_screen := Vector2.ZERO
 var target_screen := Vector2.ZERO
 var has_target := false
 
+# Mobile/tablet view controls.
+var view_zoom := 1.0
+var active_touches: Dictionary = {}
+var pinch_last_distance := 0.0
+var pinch_in_progress := false
+var block_tap_until_clear := false
+var tap_candidate_index := -1
+var tap_start_position := Vector2.ZERO
+var tap_moved := false
+
 func _ready() -> void:
 	_setup_input()
 	_load_asset_textures()
@@ -244,11 +254,72 @@ func _walking_speed_at(pos: Vector2) -> float:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		target_screen = event.position
+		target_screen = _view_to_world(event.position)
 		has_target = true
-	elif event is InputEventScreenTouch and event.pressed:
-		target_screen = event.position
-		has_target = true
+	elif event is InputEventScreenTouch:
+		_handle_screen_touch(event)
+	elif event is InputEventScreenDrag:
+		_handle_screen_drag(event)
+
+func _handle_screen_touch(event: InputEventScreenTouch) -> void:
+	if event.pressed:
+		active_touches[event.index] = event.position
+		if active_touches.size() == 1:
+			tap_candidate_index = event.index
+			tap_start_position = event.position
+			tap_moved = false
+		elif active_touches.size() >= 2:
+			pinch_in_progress = true
+			block_tap_until_clear = true
+			has_target = false
+			pinch_last_distance = _current_pinch_distance()
+	else:
+		# A single, stationary finger is still a tap-to-walk command.
+		if active_touches.size() == 1 and not block_tap_until_clear and event.index == tap_candidate_index and not tap_moved:
+			target_screen = _view_to_world(event.position)
+			has_target = true
+
+		active_touches.erase(event.index)
+		if active_touches.size() < 2:
+			pinch_in_progress = false
+			pinch_last_distance = 0.0
+		if active_touches.is_empty():
+			block_tap_until_clear = false
+			tap_candidate_index = -1
+			tap_moved = false
+
+func _handle_screen_drag(event: InputEventScreenDrag) -> void:
+	active_touches[event.index] = event.position
+
+	if event.index == tap_candidate_index and event.position.distance_to(tap_start_position) > 12.0:
+		tap_moved = true
+
+	if active_touches.size() >= 2:
+		pinch_in_progress = true
+		block_tap_until_clear = true
+		has_target = false
+
+		var new_distance := _current_pinch_distance()
+		if pinch_last_distance > 0.001 and new_distance > 0.001:
+			var factor := new_distance / pinch_last_distance
+			view_zoom = clampf(view_zoom * factor, 0.55, 2.75)
+		pinch_last_distance = new_distance
+		queue_redraw()
+
+func _current_pinch_distance() -> float:
+	if active_touches.size() < 2:
+		return 0.0
+	var keys := active_touches.keys()
+	var p1: Vector2 = active_touches[keys[0]]
+	var p2: Vector2 = active_touches[keys[1]]
+	return p1.distance_to(p2)
+
+func _view_origin() -> Vector2:
+	var center := get_viewport_rect().size * 0.5
+	return center - center * view_zoom
+
+func _view_to_world(view_position: Vector2) -> Vector2:
+	return (view_position - _view_origin()) / view_zoom
 
 func _try_move_screen(delta_screen: Vector2) -> void:
 	var old_grid := player_grid
@@ -293,6 +364,9 @@ func _edge_blocks_walking(x: int, y: int, edge: int) -> bool:
 	return false
 
 func _draw() -> void:
+	# Scale only the game world. Keep UI text at a fixed readable size.
+	draw_set_transform(_view_origin(), 0.0, Vector2(view_zoom, view_zoom))
+
 	# 1. Ground layer.
 	for y in GRID_H:
 		for x in GRID_W:
@@ -310,6 +384,9 @@ func _draw() -> void:
 	# 4. Edge overlays and player.
 	_draw_all_fences()
 	_draw_player()
+
+	# Reset transform before drawing UI.
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	_draw_ui()
 
 func _draw_asset(texture: Texture2D, tile_center: Vector2) -> void:
