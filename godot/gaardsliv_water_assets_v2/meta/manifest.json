@@ -1,0 +1,22 @@
+{
+  "version": "1.0",
+  "style": "Settlers-inspired isometric water tiles",
+  "logical_tile_size": [
+    64,
+    32
+  ],
+  "tile_sprite_canvas": [
+    96,
+    72
+  ],
+  "anchor": "bottom-center",
+  "contents": {
+    "base": 4,
+    "shores": 12,
+    "variants": 4
+  },
+  "notes": [
+    "Assets were extracted from a transparent atlas into individual PNG files.",
+    "Shore/corner naming is a first-pass organization and should be visually verified in-engine before final code mapping."
+  ]
+}
