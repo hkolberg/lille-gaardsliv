@@ -10,6 +10,7 @@ const ORIGIN := Vector2(576, 70)
 const WALK_SPEED := 110.0
 const ASSET_ROOT := "res://gaardsliv_assets_v1/"
 const TILE_TEXTURE_ORIGIN := Vector2(48.0, 52.0)
+const PROP_TEXTURE_ORIGIN := Vector2(48.0, 108.0)
 
 enum Dir { N = 1, E = 2, S = 4, W = 8 }
 
@@ -57,7 +58,9 @@ func _load_asset_textures() -> void:
 		"fence_s": load(ASSET_ROOT + "fences/fence_s.png"),
 		"fence_w": load(ASSET_ROOT + "fences/fence_w.png"),
 		"gate_n": load(ASSET_ROOT + "gates/gate_wood_n.png"),
-		"gate_e": load(ASSET_ROOT + "gates/gate_wood_e.png")
+		"gate_e": load(ASSET_ROOT + "gates/gate_wood_e.png"),
+		"tree_oak": load(ASSET_ROOT + "props/tree_oak.png"),
+		"tree_pine": load(ASSET_ROOT + "props/tree_pine.png")
 	}
 	for prefix in ["cobble", "gravel"]:
 		var folder := "cobblestone" if prefix == "cobble" else "gravel"
@@ -279,16 +282,21 @@ func _edge_blocks_walking(x: int, y: int, edge: int) -> bool:
 	return false
 
 func _draw() -> void:
-	# Ground layer.
+	# 1. Ground layer.
 	for y in GRID_H:
 		for x in GRID_W:
 			_draw_tile(x, y, tiles[y][x])
-	# Road/plaza overlays.
+	# 2. Roads and plazas use exact grid geometry.
 	for y in GRID_H:
 		for x in GRID_W:
 			if tiles[y][x].category == "road":
 				_draw_road(x, y, tiles[y][x])
-	# Edge overlays.
+	# 3. Forest vegetation is a prop layer above the ground.
+	for y in GRID_H:
+		for x in GRID_W:
+			if tiles[y][x].category == "forest":
+				_draw_forest_prop(x, y)
+	# 4. Edge overlays and player.
 	_draw_all_fences()
 	_draw_player()
 	_draw_ui()
@@ -302,10 +310,7 @@ func _draw_tile(x: int, y: int, tile: Dictionary) -> void:
 	var grass: Texture2D = asset_textures.get("grass")
 	_draw_asset(grass, c)
 
-	# Forest art is an overlay with transparent areas, so it must sit on grass.
-	if tile.category == "forest":
-		_draw_asset(asset_textures.get("forest"), c)
-	elif tile.category == "water":
+	if tile.category == "water":
 		_draw_asset(asset_textures.get("water"), c)
 
 	# Fallback marker only if the base texture failed to load.
@@ -315,6 +320,16 @@ func _draw_tile(x: int, y: int, tile: Dictionary) -> void:
 			c + Vector2(0, TILE_H * 0.5), c + Vector2(-TILE_W * 0.5, 0)
 		])
 		draw_colored_polygon(diamond, Color("#79aa5b"))
+
+func _draw_forest_prop(x: int, y: int) -> void:
+	var c := _iso(x, y)
+	var key := "tree_pine" if ((x * 3 + y * 5) % 4 == 0) else "tree_oak"
+	var texture: Texture2D = asset_textures.get(key)
+	if texture != null:
+		# Small deterministic offset avoids a rigid plantation look while
+		# keeping the tree foot inside its logical tile.
+		var offset := Vector2(float(((x + y * 2) % 5) - 2) * 2.0, float(((x * 2 + y) % 3) - 1))
+		draw_texture(texture, c + offset - PROP_TEXTURE_ORIGIN)
 
 func _road_suffix(mask: int) -> String:
 	match mask:
@@ -333,31 +348,36 @@ func _road_suffix(mask: int) -> String:
 
 func _draw_road(x: int, y: int, tile: Dictionary) -> void:
 	var c := _iso(x, y)
+
 	if tile.surface == "cobblestone_square":
-		_draw_asset(asset_textures.get("plaza_cobble"), c)
+		# Flat top surface only: no sprite side-wall, so adjacent plaza tiles
+		# join without the dark raised edge visible in the v1 atlas.
+		var diamond := PackedVector2Array([
+			_iso_f(x, y), _iso_f(x + 1, y),
+			_iso_f(x + 1, y + 1), _iso_f(x, y + 1)
+		])
+		draw_colored_polygon(diamond, Color("#aaa59c"))
+		draw_polyline(PackedVector2Array([diamond[0], diamond[1], diamond[2], diamond[3], diamond[0]]), Color("#8f8a83"), 0.7, true)
 		return
 
-	# The v1 source atlas has several filename/orientation mismatches.
-	# Use the visually verified straight pieces; render bends/junctions procedurally
-	# until those source sprites are repaired instead of showing the wrong art.
-	var texture: Texture2D = null
-	if tile.surface == "cobblestone":
-		if tile.connections == (Dir.E | Dir.W):
-			texture = asset_textures.get("road_cobble_nw")
-		elif tile.connections == (Dir.N | Dir.S):
-			texture = asset_textures.get("road_cobble_ne")
-	elif tile.surface == "gravel":
-		if tile.connections == (Dir.E | Dir.W):
-			texture = asset_textures.get("road_gravel_ns")
-		elif tile.connections == (Dir.N | Dir.S):
-			texture = asset_textures.get("road_gravel_ne")
-
-	if texture != null:
-		_draw_asset(texture, c)
+	# Roads are drawn from the tile centre to the exact midpoint of each
+	# connected grid edge. This guarantees perfect alignment between tiles.
+	if tile.surface == "gravel":
+		_draw_grid_road(c, tile.connections, 12.0, Color("#d4ad72"), Color("#a47c4e"))
 	else:
-		var width := 11.0 if tile.surface == "gravel" else 21.0
-		var col := Color("#c0a174") if tile.surface == "gravel" else Color("#9f9a91")
-		_draw_connections(c, tile.connections, width, col)
+		_draw_grid_road(c, tile.connections, 18.0, Color("#aaa59c"), Color("#77736e"))
+
+func _draw_grid_road(c: Vector2, mask: int, width: float, fill: Color, edge: Color) -> void:
+	# Dark outer stroke then lighter surface gives a readable road edge
+	# without changing the grid geometry.
+	draw_circle(c, (width + 2.0) * 0.5, edge)
+	for d in [Dir.N, Dir.E, Dir.S, Dir.W]:
+		if (mask & d) != 0:
+			draw_line(c, _edge_point(c, d), edge, width + 2.0, true)
+	draw_circle(c, width * 0.5, fill)
+	for d in [Dir.N, Dir.E, Dir.S, Dir.W]:
+		if (mask & d) != 0:
+			draw_line(c, _edge_point(c, d), fill, width, true)
 
 func _edge_point(c: Vector2, d: int) -> Vector2:
 	match d:
