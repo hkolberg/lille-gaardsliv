@@ -143,8 +143,10 @@ func _process(delta: float) -> void:
 	var walk_speed := _walking_speed_at(player_grid)
 	if input.length() > 0.0:
 		has_target = false
-		# Screen-direction movement feels natural in an isometric view.
-		_try_move_screen(input.normalized() * walk_speed * delta)
+		# Keyboard input follows the actual isometric grid axes.
+		# This prevents gradual sideways drift when walking along a diagonal map axis.
+		var screen_direction := _grid_input_to_screen_direction(input)
+		_try_move_screen(screen_direction * walk_speed * delta)
 	elif has_target:
 		var d := player_screen.direction_to(target_screen)
 		if player_screen.distance_to(target_screen) > 5.0:
@@ -152,6 +154,16 @@ func _process(delta: float) -> void:
 		else:
 			has_target = false
 	queue_redraw()
+
+func _grid_input_to_screen_direction(input: Vector2) -> Vector2:
+	# Grid X maps down-right/up-left; grid Y maps down-left/up-right.
+	# Converting through the same 2:1 projection used by _iso_f keeps motion
+	# exactly parallel to tile edges/road axes.
+	var screen_vector := Vector2(
+		(input.x - input.y) * TILE_W * 0.5,
+		(input.x + input.y) * TILE_H * 0.5
+	)
+	return screen_vector.normalized()
 
 func _walking_speed_at(pos: Vector2) -> float:
 	var x := clampi(int(floor(pos.x)), 0, GRID_W - 1)
