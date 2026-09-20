@@ -65,6 +65,15 @@ func _build_world() -> void:
 	# Southern meadow stays open. A fenced pasture occupies part of it.
 	_add_fence_rect(2, 12, 7, 17, Vector2i(4, 12))
 
+	# Small pond in the south-east part of the example world.
+	# The irregular outline makes it read as a natural water body rather than a block.
+	for p in [
+		Vector2i(11, 17), Vector2i(12, 17),
+		Vector2i(10, 18), Vector2i(11, 18), Vector2i(12, 18), Vector2i(13, 18),
+		Vector2i(10, 19), Vector2i(11, 19), Vector2i(12, 19), Vector2i(13, 19)
+	]:
+		tiles[p.y][p.x] = _tile("water", "water", 0)
+
 	# Smaller fenced meadow near the village, with a walking gate.
 	_add_fence_rect(13, 12, 17, 16, Vector2i(15, 12))
 
@@ -106,6 +115,12 @@ func _tile(category: String, surface: String, connections: int) -> Dictionary:
 	}
 
 func _movement_for(category: String, surface: String) -> Dictionary:
+	if category == "water":
+		return {
+			"walking": {"traversable": false},
+			"tractor": {"traversable": false},
+			"boat": {"traversable": true, "cost": 1.0}
+		}
 	var walk_cost := 2.0
 	if surface == "gravel": walk_cost = 1.3
 	elif surface == "cobblestone" or surface == "cobblestone_square": walk_cost = 1.0
@@ -260,11 +275,15 @@ func _draw_tile(x: int, y: int, tile: Dictionary) -> void:
 	])
 	var base := Color("#79aa5b")
 	if tile.category == "forest": base = Color("#527d49")
+	elif tile.category == "water": base = Color("#4f9fbd")
 	draw_colored_polygon(diamond, base)
 	draw_polyline(PackedVector2Array([diamond[0], diamond[1], diamond[2], diamond[3], diamond[0]]), Color(0,0,0,0.10), 1.0)
 	if tile.category == "forest":
 		draw_circle(c + Vector2(0,-8), 8, Color("#315f38"))
 		draw_line(c + Vector2(0,-2), c + Vector2(0,5), Color("#64462d"), 3)
+	elif tile.category == "water":
+		draw_line(c + Vector2(-10,-2), c + Vector2(8,-2), Color(1,1,1,0.22), 1.5, true)
+		draw_line(c + Vector2(-5,3), c + Vector2(11,3), Color(1,1,1,0.14), 1.0, true)
 
 func _draw_road(x: int, y: int, tile: Dictionary) -> void:
 	var c := _iso(x, y)
