@@ -12,6 +12,7 @@ const ASSET_ROOT_V1 := "res://gaardsliv_assets_v1/"
 const ASSET_ROOT_V2 := "res://gaardsliv_assets_v2/"
 const ASSET_ROOT_V3 := "res://gaardsliv_assets_v3/"
 const ASSET_ROOT_V4 := "res://gaardsliv_assets_v4/"
+const ASSET_ROOT_WATERFIX := "res://gaardsliv_waterfix_v1/"
 const TILE_TEXTURE_ORIGIN := Vector2(48.0, 52.0)
 const PROP_TEXTURE_ORIGIN := Vector2(48.0, 108.0)
 
@@ -81,26 +82,28 @@ func _load_asset_textures() -> void:
 		"plaza_variant_01_v4": load(ASSET_ROOT_V4 + "plazas/plaza_variant_01.png"),
 		"plaza_variant_02_v4": load(ASSET_ROOT_V4 + "plazas/plaza_variant_02.png"),
 
-		# v4 open-water bases.
-		"water_plain_v4": load(ASSET_ROOT_V4 + "water/base/water_center_plain.png"),
-		"water_center_v4": load(ASSET_ROOT_V4 + "water/base/water_center.png"),
-		"water_rocks_v4": load(ASSET_ROOT_V4 + "water/base/water_center_rocks.png"),
-		"water_reeds_v4": load(ASSET_ROOT_V4 + "water/base/water_center_reeds.png")
+		# WaterFix v1.1: normalized to the actual 64x32 game grid.
+		"water_plain_fix": load(ASSET_ROOT_WATERFIX + "water/base/water_center_plain.png"),
+		"water_rocks_fix": load(ASSET_ROOT_WATERFIX + "water/variants/water_center_rocks.png"),
+		"water_reeds_fix": load(ASSET_ROOT_WATERFIX + "water/variants/water_center_reeds.png"),
+		"water_lilies_fix": load(ASSET_ROOT_WATERFIX + "water/variants/water_center_lilies.png")
 	}
 
 	for suffix in ["n", "e", "s", "w", "ne", "nw", "se", "sw"]:
 		var prefix := "water_edge_" if suffix.length() == 1 else "water_corner_"
-		asset_textures["water_shore_%s_v4" % suffix] = load(
-			ASSET_ROOT_V4 + "water/shores/%s%s.png" % [prefix, suffix]
+		asset_textures["water_shore_%s_fix" % suffix] = load(
+			ASSET_ROOT_WATERFIX + "water/shores/%s%s.png" % [prefix, suffix]
 		)
 
 	for suffix in ["ne", "nw", "se", "sw"]:
-		asset_textures["water_inner_%s_v4" % suffix] = load(
-			ASSET_ROOT_V4 + "water/shores/water_inner_%s.png" % suffix
+		asset_textures["water_inner_%s_fix" % suffix] = load(
+			ASSET_ROOT_WATERFIX + "water/shores/water_inner_%s.png" % suffix
 		)
 
-	asset_textures["water_edge_n_rocks_v4"] = load(ASSET_ROOT_V4 + "water/shores/water_edge_n_rocks.png")
-	asset_textures["water_edge_e_reeds_v4"] = load(ASSET_ROOT_V4 + "water/shores/water_edge_e_reeds.png")
+	asset_textures["water_edge_n_rocks_fix"] = load(ASSET_ROOT_WATERFIX + "water/variants/water_edge_n_rocks.png")
+	asset_textures["water_edge_e_reeds_fix"] = load(ASSET_ROOT_WATERFIX + "water/variants/water_edge_e_reeds.png")
+	asset_textures["water_ford_ns_fix"] = load(ASSET_ROOT_WATERFIX + "water/crossings/water_ford_rocks_ns.png")
+	asset_textures["water_ford_ew_fix"] = load(ASSET_ROOT_WATERFIX + "water/crossings/water_ford_rocks_ew.png")
 
 	# Keep v2 road textures available as emergency fallback while roads remain geometric.
 	for prefix in ["cobble", "gravel"]:
@@ -469,39 +472,31 @@ func _is_water(x: int, y: int) -> bool:
 	return x >= 0 and y >= 0 and x < GRID_W and y < GRID_H and tiles[y][x].category == "water"
 
 func _water_texture_key(x: int, y: int) -> String:
-	# Land-neighbour mask in game-grid directions.
+	# Structural shoreline selection only. No decorative randomness in this
+	# validation build: first verify scale, rotation and seams.
 	var land_mask := 0
 	if not _is_water(x, y - 1): land_mask |= Dir.N
 	if not _is_water(x + 1, y): land_mask |= Dir.E
 	if not _is_water(x, y + 1): land_mask |= Dir.S
 	if not _is_water(x - 1, y): land_mask |= Dir.W
 
-	# V4 art labels follow the sprite diamond, which is rotated relative to grid neighbours.
+	# WaterFix filenames follow the documented asset-diamond directions.
 	var asset_mask := _grid_mask_to_asset_mask(land_mask)
 
 	match asset_mask:
-		Dir.N: return "water_shore_n_v4"
-		Dir.E: return "water_shore_e_v4"
-		Dir.S: return "water_shore_s_v4"
-		Dir.W: return "water_shore_w_v4"
-		Dir.N | Dir.E: return "water_shore_ne_v4"
-		Dir.N | Dir.W: return "water_shore_nw_v4"
-		Dir.S | Dir.E: return "water_shore_se_v4"
-		Dir.S | Dir.W: return "water_shore_sw_v4"
+		0: return "water_plain_fix"
+		Dir.N: return "water_shore_n_fix"
+		Dir.E: return "water_shore_e_fix"
+		Dir.S: return "water_shore_s_fix"
+		Dir.W: return "water_shore_w_fix"
+		Dir.N | Dir.E: return "water_shore_ne_fix"
+		Dir.N | Dir.W: return "water_shore_nw_fix"
+		Dir.S | Dir.E: return "water_shore_se_fix"
+		Dir.S | Dir.W: return "water_shore_sw_fix"
 
-	# Interior water defaults to the new clean tile. A few deterministic cells
-	# get rocks/reeds as visual variation without affecting traversability.
-	if land_mask == 0:
-		var variant := (x * 17 + y * 31) % 12
-		if variant == 0:
-			return "water_rocks_v4"
-		elif variant == 1:
-			return "water_reeds_v4"
-		return "water_plain_v4"
-
-	# Opposite or 3/4-sided land combinations do not yet have a dedicated
-	# single v4 shoreline tile. Plain water is safer than a mismatched collage.
-	return "water_plain_v4"
+	# The current example pond does not need opposite-edge or 3/4-edge cases.
+	# Use plain water rather than a visually incorrect structural asset.
+	return "water_plain_fix"
 
 func _draw_forest_prop(x: int, y: int) -> void:
 	var c := _iso(x, y)
