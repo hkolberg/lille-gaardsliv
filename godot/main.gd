@@ -8,7 +8,8 @@ const TILE_W := 64.0
 const TILE_H := 32.0
 const ORIGIN := Vector2(576, 70)
 const WALK_SPEED := 110.0
-const ASSET_ROOT := "res://gaardsliv_assets_v1/"
+const ASSET_ROOT_V1 := "res://gaardsliv_assets_v1/"
+const ASSET_ROOT_V2 := "res://gaardsliv_assets_v2/"
 const TILE_TEXTURE_ORIGIN := Vector2(48.0, 52.0)
 const PROP_TEXTURE_ORIGIN := Vector2(48.0, 108.0)
 
@@ -48,26 +49,35 @@ func _add_key(action: String, key: Key) -> void:
 	InputMap.action_add_event(action, e)
 
 func _load_asset_textures() -> void:
+	# v1 remains the source for assets that v2 did not replace.
 	asset_textures = {
-		"grass": load(ASSET_ROOT + "terrain/terrain_grass.png"),
-		"forest": load(ASSET_ROOT + "terrain/terrain_forest_deciduous.png"),
-		"water": load(ASSET_ROOT + "terrain/terrain_water.png"),
-		"plaza_cobble": load(ASSET_ROOT + "plazas/plaza_cobble.png"),
-		"fence_n": load(ASSET_ROOT + "fences/fence_n.png"),
-		"fence_e": load(ASSET_ROOT + "fences/fence_e.png"),
-		"fence_s": load(ASSET_ROOT + "fences/fence_s.png"),
-		"fence_w": load(ASSET_ROOT + "fences/fence_w.png"),
-		"gate_n": load(ASSET_ROOT + "gates/gate_wood_n.png"),
-		"gate_e": load(ASSET_ROOT + "gates/gate_wood_e.png"),
-		"tree_oak": load(ASSET_ROOT + "props/tree_oak.png"),
-		"tree_pine": load(ASSET_ROOT + "props/tree_pine.png")
+		"grass": load(ASSET_ROOT_V1 + "terrain/terrain_grass.png"),
+		"tree_oak": load(ASSET_ROOT_V1 + "props/tree_oak.png"),
+
+		# v2 repair assets.
+		"tree_pine": load(ASSET_ROOT_V2 + "props/tree_pine.png"),
+		"plaza_cobble": load(ASSET_ROOT_V2 + "roads/cobblestone/plaza_cobble_flat.png")
 	}
+
 	for prefix in ["cobble", "gravel"]:
 		var folder := "cobblestone" if prefix == "cobble" else "gravel"
 		for suffix in ["ns", "ew", "ne", "nw", "se", "sw", "t_n", "t_e", "t_s", "t_w", "cross"]:
 			asset_textures["road_%s_%s" % [prefix, suffix]] = load(
-				ASSET_ROOT + "roads/%s/road_%s_%s.png" % [folder, prefix, suffix]
+				ASSET_ROOT_V2 + "roads/%s/road_%s_%s.png" % [folder, prefix, suffix]
 			)
+
+	for suffix in ["center", "n", "e", "s", "w", "ne", "nw", "se", "sw", "rock", "reeds"]:
+		asset_textures["water_%s" % suffix] = load(
+			ASSET_ROOT_V2 + "water/water_%s.png" % suffix
+		)
+
+	for suffix in ["n", "e", "s", "w"]:
+		asset_textures["fence_%s" % suffix] = load(
+			ASSET_ROOT_V2 + "fences/fence_%s.png" % suffix
+		)
+		asset_textures["gate_%s" % suffix] = load(
+			ASSET_ROOT_V2 + "gates/gate_%s.png" % suffix
+		)
 
 func _build_world() -> void:
 	tiles.clear()
@@ -311,7 +321,8 @@ func _draw_tile(x: int, y: int, tile: Dictionary) -> void:
 	_draw_asset(grass, c)
 
 	if tile.category == "water":
-		_draw_asset(asset_textures.get("water"), c)
+		var water_key := _water_texture_key(x, y)
+		_draw_asset(asset_textures.get(water_key), c)
 
 	# Fallback marker only if the base texture failed to load.
 	if grass == null:
@@ -320,6 +331,32 @@ func _draw_tile(x: int, y: int, tile: Dictionary) -> void:
 			c + Vector2(0, TILE_H * 0.5), c + Vector2(-TILE_W * 0.5, 0)
 		])
 		draw_colored_polygon(diamond, Color("#79aa5b"))
+
+func _is_water(x: int, y: int) -> bool:
+	return x >= 0 and y >= 0 and x < GRID_W and y < GRID_H and tiles[y][x].category == "water"
+
+func _water_texture_key(x: int, y: int) -> String:
+	# Build a mask of LAND edges in game-grid directions.
+	var land_mask := 0
+	if not _is_water(x, y - 1): land_mask |= Dir.N
+	if not _is_water(x + 1, y): land_mask |= Dir.E
+	if not _is_water(x, y + 1): land_mask |= Dir.S
+	if not _is_water(x - 1, y): land_mask |= Dir.W
+
+	# v2 filenames use sprite-diamond directions, rotated relative to grid dirs.
+	var asset_mask := _grid_mask_to_asset_mask(land_mask)
+	match asset_mask:
+		0: return "water_center"
+		Dir.N: return "water_n"
+		Dir.E: return "water_e"
+		Dir.S: return "water_s"
+		Dir.W: return "water_w"
+		Dir.N | Dir.E: return "water_ne"
+		Dir.N | Dir.W: return "water_nw"
+		Dir.S | Dir.E: return "water_se"
+		Dir.S | Dir.W: return "water_sw"
+	# Opposite edges / narrow tips do not yet have dedicated v2 sprites.
+	return "water_center"
 
 func _draw_forest_prop(x: int, y: int) -> void:
 	var c := _iso(x, y)
@@ -330,6 +367,16 @@ func _draw_forest_prop(x: int, y: int) -> void:
 		# keeping the tree foot inside its logical tile.
 		var offset := Vector2(float(((x + y * 2) % 5) - 2) * 2.0, float(((x * 2 + y) % 3) - 1))
 		draw_texture(texture, c + offset - PROP_TEXTURE_ORIGIN)
+
+func _grid_mask_to_asset_mask(mask: int) -> int:
+	# Grid neighbour directions and sprite-diamond labels differ by 90 degrees:
+	# grid N -> asset E, E -> S, S -> W, W -> N.
+	var result := 0
+	if (mask & Dir.N) != 0: result |= Dir.E
+	if (mask & Dir.E) != 0: result |= Dir.S
+	if (mask & Dir.S) != 0: result |= Dir.W
+	if (mask & Dir.W) != 0: result |= Dir.N
+	return result
 
 func _road_suffix(mask: int) -> String:
 	match mask:
@@ -350,22 +397,22 @@ func _draw_road(x: int, y: int, tile: Dictionary) -> void:
 	var c := _iso(x, y)
 
 	if tile.surface == "cobblestone_square":
-		# Flat top surface only: no sprite side-wall, so adjacent plaza tiles
-		# join without the dark raised edge visible in the v1 atlas.
-		var diamond := PackedVector2Array([
-			_iso_f(x, y), _iso_f(x + 1, y),
-			_iso_f(x + 1, y + 1), _iso_f(x, y + 1)
-		])
-		draw_colored_polygon(diamond, Color("#aaa59c"))
-		draw_polyline(PackedVector2Array([diamond[0], diamond[1], diamond[2], diamond[3], diamond[0]]), Color("#8f8a83"), 0.7, true)
+		_draw_asset(asset_textures.get("plaza_cobble"), c)
 		return
 
-	# Roads are drawn from the tile centre to the exact midpoint of each
-	# connected grid edge. This guarantees perfect alignment between tiles.
-	if tile.surface == "gravel":
-		_draw_grid_road(c, tile.connections, 12.0, Color("#d4ad72"), Color("#a47c4e"))
+	var prefix := "gravel" if tile.surface == "gravel" else "cobble"
+	var asset_mask := _grid_mask_to_asset_mask(tile.connections)
+	var suffix := _road_suffix(asset_mask)
+	var texture: Texture2D = asset_textures.get("road_%s_%s" % [prefix, suffix])
+
+	if texture != null:
+		_draw_asset(texture, c)
 	else:
-		_draw_grid_road(c, tile.connections, 18.0, Color("#aaa59c"), Color("#77736e"))
+		# Geometry fallback only if a v2 variant is missing.
+		if tile.surface == "gravel":
+			_draw_grid_road(c, tile.connections, 12.0, Color("#d4ad72"), Color("#a47c4e"))
+		else:
+			_draw_grid_road(c, tile.connections, 18.0, Color("#aaa59c"), Color("#77736e"))
 
 func _draw_grid_road(c: Vector2, mask: int, width: float, fill: Color, edge: Color) -> void:
 	# Dark outer stroke then lighter surface gives a readable road edge
@@ -401,7 +448,23 @@ func _draw_all_fences() -> void:
 		var gate := bool(fences[key].gate)
 		_draw_fence_edge(x, y, edge, gate)
 
+func _asset_edge_suffix(grid_edge: int) -> String:
+	match grid_edge:
+		Dir.N: return "e"
+		Dir.E: return "s"
+		Dir.S: return "w"
+		Dir.W: return "n"
+	return ""
+
 func _draw_fence_edge(x: int, y: int, edge: int, gate: bool) -> void:
+	var suffix := _asset_edge_suffix(edge)
+	var key := ("%s_%s" % ["gate" if gate else "fence", suffix])
+	var texture: Texture2D = asset_textures.get(key)
+	if texture != null:
+		_draw_asset(texture, _iso(x, y))
+		return
+
+	# Geometry fallback if the expected v2 overlay is missing.
 	var a := Vector2.ZERO
 	var b := Vector2.ZERO
 	match edge:
@@ -409,30 +472,8 @@ func _draw_fence_edge(x: int, y: int, edge: int, gate: bool) -> void:
 		Dir.E: a = _iso_f(x + 1, y); b = _iso_f(x + 1, y + 1)
 		Dir.S: a = _iso_f(x, y + 1); b = _iso_f(x + 1, y + 1)
 		Dir.W: a = _iso_f(x, y); b = _iso_f(x, y + 1)
-
-	var post_col := Color("#6f4526")
-	var rail_col := Color("#8b5a31")
-	var post_h := Vector2(0, -11)
-	var rail_h1 := Vector2(0, -4)
-	var rail_h2 := Vector2(0, -8)
-
-	# Posts always sit exactly on the tile boundary endpoints.
-	draw_line(a, a + post_h, post_col, 3.0, true)
-	draw_line(b, b + post_h, post_col, 3.0, true)
-
-	if gate:
-		# Leave a visible opening in the centre while keeping gate posts.
-		var g1 := a.lerp(b, 0.34)
-		var g2 := a.lerp(b, 0.66)
-		draw_line(g1, g1 + post_h, post_col, 3.0, true)
-		draw_line(g2, g2 + post_h, post_col, 3.0, true)
-		draw_line(a + rail_h1, g1 + rail_h1, rail_col, 2.2, true)
-		draw_line(a + rail_h2, g1 + rail_h2, rail_col, 2.0, true)
-		draw_line(g2 + rail_h1, b + rail_h1, rail_col, 2.2, true)
-		draw_line(g2 + rail_h2, b + rail_h2, rail_col, 2.0, true)
-	else:
-		draw_line(a + rail_h1, b + rail_h1, rail_col, 2.2, true)
-		draw_line(a + rail_h2, b + rail_h2, rail_col, 2.0, true)
+	if not gate:
+		draw_line(a, b, Color("#8b5a31"), 3.0, true)
 
 func _draw_player() -> void:
 	draw_ellipse(player_screen + Vector2(0,7), Vector2(9,4), Color(0,0,0,.28))
