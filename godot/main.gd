@@ -17,7 +17,6 @@ const ASSET_ROOT_WATER_V2 := "res://gaardsliv_water_assets_v2/"
 const ASSET_ROOT_STRAIGHT_SHORES := "res://gaardsliv_straight_shore_edges_v1/"
 const TILE_TEXTURE_ORIGIN := Vector2(48.0, 52.0)
 const PROP_TEXTURE_ORIGIN := Vector2(48.0, 108.0)
-const STRAIGHT_SHORE_SOURCE := Rect2(2.0, 2.0, 92.0, 68.0)
 
 enum Dir { N = 1, E = 2, S = 4, W = 8 }
 
@@ -431,14 +430,21 @@ func _draw_asset(texture: Texture2D, tile_center: Vector2) -> void:
 	if texture != null:
 		draw_texture(texture, tile_center - TILE_TEXTURE_ORIGIN)
 
-func _draw_straight_shore(texture: Texture2D, tile_center: Vector2) -> void:
+func _draw_water_asset(texture: Texture2D, tile_center: Vector2) -> void:
 	if texture == null:
 		return
-	# The generated source sprites visually occupied almost the full 96x72
-	# canvas, while one logical game tile is only a 64x32 diamond. Crop the
-	# transparent fringe and map the artwork exactly onto that footprint.
+
+	# Water assets came from several atlas generations with different visual
+	# diamond sizes. Normalize every water sprite — plain, straight edge and
+	# corner — to the exact same logical 64x32 game tile. Using the actual
+	# opaque bounding box avoids scaling transparent padding into the tile.
+	var image := texture.get_image()
+	var used: Rect2i = image.get_used_rect()
+	if used.size.x <= 0 or used.size.y <= 0:
+		return
+	var source := Rect2(Vector2(used.position), Vector2(used.size))
 	var destination := Rect2(tile_center - Vector2(32.0, 16.0), Vector2(64.0, 32.0))
-	draw_texture_rect_region(texture, destination, STRAIGHT_SHORE_SOURCE)
+	draw_texture_rect_region(texture, destination, source)
 
 func _draw_tile(x: int, y: int, tile: Dictionary) -> void:
 	var c := _iso(x, y)
@@ -448,10 +454,7 @@ func _draw_tile(x: int, y: int, tile: Dictionary) -> void:
 	if tile.category == "water":
 		var water_key := _water_texture_key(x, y)
 		var water_texture: Texture2D = asset_textures.get(water_key)
-		if water_key.begins_with("water_straight_"):
-			_draw_straight_shore(water_texture, c)
-		else:
-			_draw_asset(water_texture, c)
+		_draw_water_asset(water_texture, c)
 
 	# Fallback marker only if the base texture failed to load.
 	if grass == null:
@@ -650,4 +653,4 @@ func draw_ellipse(center: Vector2, radius: Vector2, color: Color) -> void:
 	draw_colored_polygon(pts, color)
 
 func _draw_ui() -> void:
-	draw_string(ThemeDB.fallback_font, Vector2(16,24), "Vann-test: rettkanter + hjørner. 4 innsjøstørrelser. Dra/knip på mobil.", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
+	draw_string(ThemeDB.fallback_font, Vector2(16,24), "Vann-test: alle vann-assets normalisert til 64x32. Dra/knip på mobil.", HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
