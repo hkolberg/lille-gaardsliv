@@ -134,32 +134,80 @@ func _build_world() -> void:
 	tiles.clear()
 	fences.clear()
 
-	# Clean shoreline validation world. Each lake uses only topology that is
-	# currently supported by verified art: interior (0 land sides), straight
-	# bank (1 land side), and convex corner (2 adjacent land sides).
+	# Complex shoreline validation world: one large organic lake with bays,
+	# peninsulas, narrow sections and concave shoreline transitions.
 	for y in GRID_H:
 		var row: Array = []
 		for x in GRID_W:
 			row.append(_tile("meadow", "grass", 0))
 		tiles.append(row)
 
-	# Lake 1: compact square pond.
-	_fill_water_rect(2, 2, 5, 5)
+	# Main lake body.
+	_set_water_row(2, 8, 10)
+	_set_water_row(3, 6, 12)
+	_set_water_row(4, 5, 14)
+	_set_water_row(5, 4, 15)
+	_set_water_row(6, 4, 16)
+	_set_water_row(7, 3, 16)
+	_set_water_row(8, 3, 17)
+	_set_water_row(9, 4, 17)
+	_set_water_row(10, 5, 16)
+	_set_water_row(11, 6, 15)
+	_set_water_row(12, 7, 14)
+	_set_water_row(13, 8, 13)
 
-	# Lake 2: broad lake with long straight banks.
-	_fill_water_rect(10, 2, 17, 6)
+	# North-west bay.
+	for p in [
+		Vector2i(3, 5),
+		Vector2i(2, 6), Vector2i(3, 6),
+		Vector2i(2, 7)
+	]:
+		tiles[p.y][p.x] = _tile("water", "water", 0)
 
-	# Lake 3: narrow, long lake.
-	_fill_water_rect(2, 11, 5, 17)
+	# South-west bay.
+	for p in [
+		Vector2i(4, 10),
+		Vector2i(4, 11),
+		Vector2i(5, 12)
+	]:
+		tiles[p.y][p.x] = _tile("water", "water", 0)
 
-	# Lake 4: large rectangular lake, useful for checking long continuous
-	# shoreline plus a substantial plain-water interior.
-	_fill_water_rect(11, 11, 17, 17)
+	# Small northern arm.
+	for p in [
+		Vector2i(9, 1), Vector2i(10, 1),
+		Vector2i(10, 0)
+	]:
+		tiles[p.y][p.x] = _tile("water", "water", 0)
 
-func _fill_water_rect(x0: int, y0: int, x1: int, y1: int) -> void:
-	for y in range(y0, y1 + 1):
-		for x in range(x0, x1 + 1):
-			tiles[y][x] = _tile("water", "water", 0)
+	# Eastern narrow arm.
+	for p in [
+		Vector2i(17, 7), Vector2i(18, 7),
+		Vector2i(18, 8), Vector2i(19, 8)
+	]:
+		tiles[p.y][p.x] = _tile("water", "water", 0)
+
+	# South-facing bay / narrow tongue.
+	for p in [
+		Vector2i(10, 13),
+		Vector2i(10, 14), Vector2i(11, 14)
+	]:
+		tiles[p.y][p.x] = _tile("water", "water", 0)
+
+	# Two intentional land intrusions create concave bays / peninsula-like shapes.
+	for p in [
+		Vector2i(13, 4),
+		Vector2i(14, 5),
+		Vector2i(15, 10),
+		Vector2i(14, 11)
+	]:
+		tiles[p.y][p.x] = _tile("meadow", "grass", 0)
+
+	# Keep the player on land for inspection.
+	player_grid = Vector2(9.5, 16.5)
+
+func _set_water_row(y: int, x0: int, x1: int) -> void:
+	for x in range(x0, x1 + 1):
+		tiles[y][x] = _tile("water", "water", 0)
 
 func _tile(category: String, surface: String, connections: int) -> Dictionary:
 	return {
