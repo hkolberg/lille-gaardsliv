@@ -125,10 +125,19 @@ func _load_asset_textures() -> void:
 
 	# B-gap fillers: small land/shore wedges at a single visual tip of a water
 	# diamond. These are used when land touches the water tile only diagonally.
-	asset_textures["water_inner_point_n"] = load(ASSET_ROOT_INNER_POINTS + "water/inner_points/water_inner_point_n.png")
 	asset_textures["water_inner_point_e"] = load(ASSET_ROOT_INNER_POINTS + "water/inner_points/water_inner_point_e.png")
 	asset_textures["water_inner_point_s"] = load(ASSET_ROOT_INNER_POINTS + "water/inner_points/water_inner_point_s.png")
 	asset_textures["water_inner_point_w"] = load(ASSET_ROOT_INNER_POINTS + "water/inner_points/water_inner_point_w.png")
+
+	# Build the north variant from the valid south texture at runtime. The
+	# originally committed north PNG was corrupt in Godot/libpng, which left
+	# only the solid-blue water underlay visible for this B-gap orientation.
+	var inner_s_texture: Texture2D = asset_textures.get("water_inner_point_s")
+	if inner_s_texture != null:
+		var inner_n_image := inner_s_texture.get_image()
+		inner_n_image.flip_x()
+		inner_n_image.flip_y()
+		asset_textures["water_inner_point_n"] = ImageTexture.create_from_image(inner_n_image)
 
 	# Keep v2 road textures available as emergency fallback while roads remain geometric.
 	for prefix in ["cobble", "gravel"]:
