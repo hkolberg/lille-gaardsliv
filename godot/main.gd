@@ -15,6 +15,7 @@ const ASSET_ROOT_V4 := "res://gaardsliv_assets_v4/"
 const ASSET_ROOT_WATERFIX := "res://gaardsliv_waterfix_v1/"
 const ASSET_ROOT_WATER_V2 := "res://gaardsliv_water_assets_v2/"
 const ASSET_ROOT_STRAIGHT_SHORES := "res://gaardsliv_straight_shore_edges_v1/"
+const ASSET_ROOT_OUTER_CORNERS := "res://gaardsliv_lake_outer_corners_v1/"
 const TILE_TEXTURE_ORIGIN := Vector2(48.0, 52.0)
 const PROP_TEXTURE_ORIGIN := Vector2(48.0, 108.0)
 
@@ -113,6 +114,13 @@ func _load_asset_textures() -> void:
 	asset_textures["water_straight_ne"] = load(ASSET_ROOT_STRAIGHT_SHORES + "water/straight_edges/water_edge_ne.png")
 	asset_textures["water_straight_sw"] = load(ASSET_ROOT_STRAIGHT_SHORES + "water/straight_edges/water_edge_sw.png")
 	asset_textures["water_straight_se"] = load(ASSET_ROOT_STRAIGHT_SHORES + "water/straight_edges/water_edge_se.png")
+
+	# New outer-corner shoreline assets. These keep the land band at full
+	# thickness all the way to the two straight-edge neighbours.
+	asset_textures["water_outer_corner_n"] = load(ASSET_ROOT_OUTER_CORNERS + "water/outer_corners/water_outer_corner_n.png")
+	asset_textures["water_outer_corner_e"] = load(ASSET_ROOT_OUTER_CORNERS + "water/outer_corners/water_outer_corner_e.png")
+	asset_textures["water_outer_corner_s"] = load(ASSET_ROOT_OUTER_CORNERS + "water/outer_corners/water_outer_corner_s.png")
+	asset_textures["water_outer_corner_w"] = load(ASSET_ROOT_OUTER_CORNERS + "water/outer_corners/water_outer_corner_w.png")
 
 	# Keep v2 road textures available as emergency fallback while roads remain geometric.
 	for prefix in ["cobble", "gravel"]:
@@ -529,15 +537,16 @@ func _water_texture_key(x: int, y: int) -> String:
 		Dir.W:
 			return "water_straight_ne"
 
-		# Existing v2 visual assets are the four useful two-sided convex banks.
+		# Two adjacent land neighbours = an outer lake corner. The new corner
+		# assets are named by the visible tip of the isometric diamond.
 		Dir.N | Dir.W:
-			return "water_shore_n_v2"
+			return "water_outer_corner_n"
 		Dir.N | Dir.E:
-			return "water_shore_e_v2"
+			return "water_outer_corner_e"
 		Dir.E | Dir.S:
-			return "water_shore_s_v2"
+			return "water_outer_corner_s"
 		Dir.S | Dir.W:
-			return "water_shore_w_v2"
+			return "water_outer_corner_w"
 
 	# Narrow tips, opposite banks and concave cases do not yet have a verified
 	# matching structural asset. Plain water avoids drawing land through a
