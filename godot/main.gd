@@ -15,7 +15,7 @@ const ASSET_ROOT_V4 := "res://gaardsliv_assets_v4/"
 const ASSET_ROOT_WATERFIX := "res://gaardsliv_waterfix_v1/"
 const ASSET_ROOT_WATER_V2 := "res://gaardsliv_water_assets_v2/"
 const ASSET_ROOT_STRAIGHT_SHORES := "res://gaardsliv_straight_shore_edges_v1/"
-const ASSET_ROOT_OUTER_CORNERS := "res://gaardsliv_lake_outer_corners_v1/"
+const ASSET_ROOT_OUTER_CORNERS := "res://gaardsliv_lake_outer_corners_v2/"
 const TILE_TEXTURE_ORIGIN := Vector2(48.0, 52.0)
 const PROP_TEXTURE_ORIGIN := Vector2(48.0, 108.0)
 
