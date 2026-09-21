@@ -16,11 +16,9 @@ const ASSET_ROOT_WATERFIX := "res://gaardsliv_waterfix_v1/"
 const ASSET_ROOT_WATER_V2 := "res://gaardsliv_water_assets_v2/"
 const ASSET_ROOT_STRAIGHT_SHORES := "res://gaardsliv_straight_shore_edges_v1/"
 const ASSET_ROOT_OUTER_CORNERS := "res://gaardsliv_lake_outer_corners_v2/"
-const ASSET_ROOT_INNER_POINTS := "res://gaardsliv_water_inner_points_v1/"
+const ASSET_ROOT_INNER_POINTS := "res://gaardsliv_water_inner_points_v2/"
 const TILE_TEXTURE_ORIGIN := Vector2(48.0, 52.0)
 const PROP_TEXTURE_ORIGIN := Vector2(48.0, 108.0)
-const VISUAL_OUTER_POINT_KEEP_DEPTH := 0.22
-const VISUAL_OUTER_POINT_BLEND_DEPTH := 0.10
 
 enum Dir { N = 1, E = 2, S = 4, W = 8 }
 
@@ -126,77 +124,13 @@ func _load_asset_textures() -> void:
 	asset_textures["water_outer_corner_s"] = load(ASSET_ROOT_OUTER_CORNERS + "water/outer_corners/water_outer_corner_s.png")
 	asset_textures["water_outer_corner_w"] = load(ASSET_ROOT_OUTER_CORNERS + "water/outer_corners/water_outer_corner_w.png")
 
-	# B-gap fillers: small land/shore wedges at a single visual tip of a water
-	# diamond. These are used when land touches the water tile only diagonally.
-	asset_textures["water_inner_point_e"] = load(ASSET_ROOT_INNER_POINTS + "water/inner_points/water_inner_point_e.png")
-	asset_textures["water_inner_point_s"] = load(ASSET_ROOT_INNER_POINTS + "water/inner_points/water_inner_point_s.png")
-	asset_textures["water_inner_point_w"] = load(ASSET_ROOT_INNER_POINTS + "water/inner_points/water_inner_point_w.png")
-
-	# Build the north variant from the valid south texture at runtime. The
-	# originally committed north PNG was corrupt in Godot/libpng, which left
-	# only the solid-blue water underlay visible for this B-gap orientation.
-	var inner_s_texture: Texture2D = asset_textures.get("water_inner_point_s")
-	if inner_s_texture != null:
-		var inner_n_image := inner_s_texture.get_image()
-		inner_n_image.flip_x()
-		inner_n_image.flip_y()
-		asset_textures["water_inner_point_n"] = ImageTexture.create_from_image(inner_n_image)
-
-	# The inner-point topology assets are the visual OUTER land points that
-	# protrude into the lake (the rocky wedges highlighted in the test image).
-	# Reduce their land reach at runtime while preserving the existing art,
-	# orientation and water texture around the tip.
-	_build_reduced_visual_outer_points()
-
-
-func _normalized_water_image(texture: Texture2D) -> Image:
-	var image := texture.get_image()
-	var used: Rect2i = image.get_used_rect()
-	if used.size.x <= 0 or used.size.y <= 0:
-		return Image.create(64, 32, false, Image.FORMAT_RGBA8)
-	var normalized := image.get_region(used)
-	normalized.resize(64, 32, Image.INTERPOLATE_LANCZOS)
-	return normalized
-
-func _visual_outer_point_depth(suffix: String, x: int, y: int) -> float:
-	match suffix:
-		"n":
-			return float(y) / 31.0
-		"s":
-			return float(31 - y) / 31.0
-		"e":
-			return float(63 - x) / 63.0
-		"w":
-			return float(x) / 63.0
-	return 1.0
-
-func _build_reduced_visual_outer_points() -> void:
-	var plain_texture: Texture2D = asset_textures.get("water_plain_v2")
-	if plain_texture == null:
-		return
-	var plain := _normalized_water_image(plain_texture)
-
+	# B-gap fillers: direct v2 assets for the four visual OUTER shoreline
+	# points. These use the approved small-land design (about 1/6 land,
+	# 5/6 water) and no longer rely on runtime masking or generated variants.
 	for suffix in ["n", "e", "s", "w"]:
-		var key := "water_inner_point_%s" % suffix
-		var point_texture: Texture2D = asset_textures.get(key)
-		if point_texture == null:
-			continue
-		var point := _normalized_water_image(point_texture)
-		var reduced := plain.duplicate()
-
-		for y in range(32):
-			for x in range(64):
-				var depth := _visual_outer_point_depth(suffix, x, y)
-				var point_weight := 1.0 - smoothstep(
-					VISUAL_OUTER_POINT_KEEP_DEPTH,
-					VISUAL_OUTER_POINT_KEEP_DEPTH + VISUAL_OUTER_POINT_BLEND_DEPTH,
-					depth
-				)
-				var water_pixel := plain.get_pixel(x, y)
-				var point_pixel := point.get_pixel(x, y)
-				reduced.set_pixel(x, y, water_pixel.lerp(point_pixel, point_weight))
-
-		asset_textures[key] = ImageTexture.create_from_image(reduced)
+		asset_textures["water_inner_point_%s" % suffix] = load(
+			ASSET_ROOT_INNER_POINTS + "water/inner_points/water_inner_point_%s.png" % suffix
+		)
 
 	# Keep v2 road textures available as emergency fallback while roads remain geometric.
 	for prefix in ["cobble", "gravel"]:
@@ -204,7 +138,7 @@ func _build_reduced_visual_outer_points() -> void:
 		for suffix in ["ns", "ew", "ne", "nw", "se", "sw", "t_n", "t_e", "t_s", "t_w", "cross"]:
 			asset_textures["road_%s_%s_v2" % [prefix, suffix]] = load(
 				ASSET_ROOT_V2 + "roads/%s/road_%s_%s.png" % [folder, prefix, suffix]
-			)
+		)
 
 func _build_world() -> void:
 	tiles.clear()
@@ -651,8 +585,8 @@ func _water_texture_key(x: int, y: int) -> String:
 	# S lower-left, W upper-left.
 	# A B-type gap is not a normal shoreline edge: land touches this water
 	# tile only at one diagonal grid neighbour. In the current visual layout
-	# these are the outward rocky land points. Their textures are reduced at
-	# load time so the land no longer projects deep into the water tile.
+	# these are the outward rocky land points. v2 uses direct small-land PNGs
+	# so the shoreline point no longer projects deep into the water tile.
 	var diagonal_land_mask := 0
 	if not _is_water(x - 1, y - 1): diagonal_land_mask |= Dir.N
 	if not _is_water(x + 1, y - 1): diagonal_land_mask |= Dir.E

@@ -1,0 +1,21 @@
+{
+  "version": "2.0",
+  "description": "Reduced visual outer shoreline points generated from the approved small-land concept.",
+  "logical_tile_size": [64, 32],
+  "sprite_canvas": [96, 72],
+  "logical_diamond_bbox_on_canvas": [16, 36, 64, 32],
+  "transparent_background": true,
+  "visual_land_target": "approximately 1/6 land, 5/6 water",
+  "orientation": {
+    "n": "land point at visual top",
+    "e": "land point at visual right",
+    "s": "land point at visual bottom",
+    "w": "land point at visual left"
+  },
+  "assets": [
+    "water/inner_points/water_inner_point_n.png",
+    "water/inner_points/water_inner_point_e.png",
+    "water/inner_points/water_inner_point_s.png",
+    "water/inner_points/water_inner_point_w.png"
+  ]
+}
