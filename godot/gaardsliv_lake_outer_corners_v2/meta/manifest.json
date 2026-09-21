@@ -1,0 +1,16 @@
+{
+  "version": "2.0",
+  "description": "Revised outer lake corner tiles with wider/full-width land and shoreline at the connection points to neighbouring straight shoreline tiles.",
+  "logical_tile_size": [64, 32],
+  "sprite_canvas": [96, 72],
+  "assets": [
+    {"file": "water/outer_corners/water_outer_corner_n.png", "meaning": "outer north corner"},
+    {"file": "water/outer_corners/water_outer_corner_e.png", "meaning": "outer east corner"},
+    {"file": "water/outer_corners/water_outer_corner_s.png", "meaning": "outer south corner"},
+    {"file": "water/outer_corners/water_outer_corner_w.png", "meaning": "outer west corner"}
+  ],
+  "notes": [
+    "Designed specifically to reduce the narrow shoreline neck at joins to straight shoreline tiles.",
+    "v1 remains available until visual verification is complete."
+  ]
+}
