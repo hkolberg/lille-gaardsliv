@@ -3,8 +3,8 @@
   "description": "B-gap shoreline point fillers selected by diagonal land adjacency.",
   "logical_tile_size": [64, 32],
   "sprite_canvas": [96, 72],
+  "generated_variants": {"water_inner_point_n": "180-degree runtime rotation of water_inner_point_s"},
   "assets": [
-    "water/inner_points/water_inner_point_n.png",
     "water/inner_points/water_inner_point_e.png",
     "water/inner_points/water_inner_point_s.png",
     "water/inner_points/water_inner_point_w.png"
