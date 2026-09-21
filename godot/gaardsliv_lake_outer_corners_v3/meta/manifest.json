@@ -1,0 +1,26 @@
+{
+  "version": "3.0",
+  "description": "Outer lake corner tiles with substantially reduced land protrusion.",
+  "logical_tile_size": [64, 32],
+  "sprite_canvas": [96, 72],
+  "logical_diamond_points": {
+    "N": [48, 36],
+    "E": [80, 52],
+    "S": [48, 68],
+    "W": [16, 52]
+  },
+  "anchor": "bottom-center",
+  "transparent_background": true,
+  "land_geometry": {
+    "grass_threshold_from_tip": "~19% of full tile depth",
+    "beach_and_foam_threshold_from_tip": "~28% of full tile depth",
+    "design_goal": "preserve straight-edge joins while removing the large land bulge from v2"
+  },
+  "assets": [
+    {"file": "water/outer_corners/water_outer_corner_n.png", "meaning": "outer north corner"},
+    {"file": "water/outer_corners/water_outer_corner_e.png", "meaning": "outer east corner"},
+    {"file": "water/outer_corners/water_outer_corner_s.png", "meaning": "outer south corner"},
+    {"file": "water/outer_corners/water_outer_corner_w.png", "meaning": "outer west corner"}
+  ],
+  "supersedes": "gaardsliv_lake_outer_corners_v2 (kept for rollback)"
+}

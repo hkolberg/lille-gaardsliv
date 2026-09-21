@@ -15,7 +15,7 @@ const ASSET_ROOT_V4 := "res://gaardsliv_assets_v4/"
 const ASSET_ROOT_WATERFIX := "res://gaardsliv_waterfix_v1/"
 const ASSET_ROOT_WATER_V2 := "res://gaardsliv_water_assets_v2/"
 const ASSET_ROOT_STRAIGHT_SHORES := "res://gaardsliv_straight_shore_edges_v1/"
-const ASSET_ROOT_OUTER_CORNERS := "res://gaardsliv_lake_outer_corners_v2/"
+const ASSET_ROOT_OUTER_CORNERS := "res://gaardsliv_lake_outer_corners_v3/"
 const ASSET_ROOT_INNER_POINTS := "res://gaardsliv_water_inner_points_v1/"
 const TILE_TEXTURE_ORIGIN := Vector2(48.0, 52.0)
 const PROP_TEXTURE_ORIGIN := Vector2(48.0, 108.0)
@@ -116,8 +116,8 @@ func _load_asset_textures() -> void:
 	asset_textures["water_straight_sw"] = load(ASSET_ROOT_STRAIGHT_SHORES + "water/straight_edges/water_edge_sw.png")
 	asset_textures["water_straight_se"] = load(ASSET_ROOT_STRAIGHT_SHORES + "water/straight_edges/water_edge_se.png")
 
-	# New outer-corner shoreline assets. These keep the land band at full
-	# thickness all the way to the two straight-edge neighbours.
+	# Reduced-land outer-corner shoreline assets. These keep the two
+	# straight-edge joins while pulling the land mass back toward the tip.
 	asset_textures["water_outer_corner_n"] = load(ASSET_ROOT_OUTER_CORNERS + "water/outer_corners/water_outer_corner_n.png")
 	asset_textures["water_outer_corner_e"] = load(ASSET_ROOT_OUTER_CORNERS + "water/outer_corners/water_outer_corner_e.png")
 	asset_textures["water_outer_corner_s"] = load(ASSET_ROOT_OUTER_CORNERS + "water/outer_corners/water_outer_corner_s.png")
