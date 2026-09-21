@@ -16,6 +16,7 @@ const ASSET_ROOT_WATERFIX := "res://gaardsliv_waterfix_v1/"
 const ASSET_ROOT_WATER_V2 := "res://gaardsliv_water_assets_v2/"
 const ASSET_ROOT_STRAIGHT_SHORES := "res://gaardsliv_straight_shore_edges_v1/"
 const ASSET_ROOT_OUTER_CORNERS := "res://gaardsliv_lake_outer_corners_v2/"
+const ASSET_ROOT_INNER_POINTS := "res://gaardsliv_water_inner_points_v1/"
 const TILE_TEXTURE_ORIGIN := Vector2(48.0, 52.0)
 const PROP_TEXTURE_ORIGIN := Vector2(48.0, 108.0)
 
@@ -121,6 +122,13 @@ func _load_asset_textures() -> void:
 	asset_textures["water_outer_corner_e"] = load(ASSET_ROOT_OUTER_CORNERS + "water/outer_corners/water_outer_corner_e.png")
 	asset_textures["water_outer_corner_s"] = load(ASSET_ROOT_OUTER_CORNERS + "water/outer_corners/water_outer_corner_s.png")
 	asset_textures["water_outer_corner_w"] = load(ASSET_ROOT_OUTER_CORNERS + "water/outer_corners/water_outer_corner_w.png")
+
+	# B-gap fillers: small land/shore wedges at a single visual tip of a water
+	# diamond. These are used when land touches the water tile only diagonally.
+	asset_textures["water_inner_point_n"] = load(ASSET_ROOT_INNER_POINTS + "water/inner_points/water_inner_point_n.png")
+	asset_textures["water_inner_point_e"] = load(ASSET_ROOT_INNER_POINTS + "water/inner_points/water_inner_point_e.png")
+	asset_textures["water_inner_point_s"] = load(ASSET_ROOT_INNER_POINTS + "water/inner_points/water_inner_point_s.png")
+	asset_textures["water_inner_point_w"] = load(ASSET_ROOT_INNER_POINTS + "water/inner_points/water_inner_point_w.png")
 
 	# Keep v2 road textures available as emergency fallback while roads remain geometric.
 	for prefix in ["cobble", "gravel"]:
@@ -573,8 +581,26 @@ func _water_texture_key(x: int, y: int) -> String:
 	#   water_edge_se = land on visual lower-left edge
 	# Grid neighbour N is upper-right on screen, E lower-right,
 	# S lower-left, W upper-left.
+	# A B-type gap is not a normal shoreline edge: land touches this water
+	# tile only at one diagonal grid neighbour, which corresponds to one visual
+	# tip of the isometric diamond. Handle that before falling back to plain water.
+	var diagonal_land_mask := 0
+	if not _is_water(x - 1, y - 1): diagonal_land_mask |= Dir.N
+	if not _is_water(x + 1, y - 1): diagonal_land_mask |= Dir.E
+	if not _is_water(x + 1, y + 1): diagonal_land_mask |= Dir.S
+	if not _is_water(x - 1, y + 1): diagonal_land_mask |= Dir.W
+
 	match land_mask:
 		0:
+			match diagonal_land_mask:
+				Dir.N:
+					return "water_inner_point_n"
+				Dir.E:
+					return "water_inner_point_e"
+				Dir.S:
+					return "water_inner_point_s"
+				Dir.W:
+					return "water_inner_point_w"
 			return "water_plain_v2"
 		Dir.N:
 			return "water_straight_nw"
