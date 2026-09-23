@@ -16,7 +16,7 @@ const ASSET_ROOT_WATERFIX := "res://gaardsliv_waterfix_v1/"
 const ASSET_ROOT_WATER_V2 := "res://gaardsliv_water_assets_v2/"
 const ASSET_ROOT_STRAIGHT_SHORES := "res://gaardsliv_straight_shore_edges_v1/"
 const ASSET_ROOT_OUTER_CORNERS := "res://gaardsliv_lake_outer_corners_v2/"
-const ASSET_ROOT_INNER_POINTS := "res://gaardsliv_water_inner_points_v2/"
+const ASSET_ROOT_INNER_POINTS := "res://gaardsliv_water_inner_points_v3/"
 const TILE_TEXTURE_ORIGIN := Vector2(48.0, 52.0)
 const PROP_TEXTURE_ORIGIN := Vector2(48.0, 108.0)
 
@@ -124,9 +124,8 @@ func _load_asset_textures() -> void:
 	asset_textures["water_outer_corner_s"] = load(ASSET_ROOT_OUTER_CORNERS + "water/outer_corners/water_outer_corner_s.png")
 	asset_textures["water_outer_corner_w"] = load(ASSET_ROOT_OUTER_CORNERS + "water/outer_corners/water_outer_corner_w.png")
 
-	# B-gap fillers: direct v2 assets for the four visual OUTER shoreline
-	# points. These use the approved small-land design (about 1/6 land,
-	# 5/6 water) and no longer rely on runtime masking or generated variants.
+	# B-gap fillers: compact v3 assets for the four visual OUTER shoreline
+	# points. All four have the same 64x32 diamond bounds and a small land tip.
 	for suffix in ["n", "e", "s", "w"]:
 		asset_textures["water_inner_point_%s" % suffix] = load(
 			ASSET_ROOT_INNER_POINTS + "water/inner_points/water_inner_point_%s.png" % suffix
@@ -585,7 +584,7 @@ func _water_texture_key(x: int, y: int) -> String:
 	# S lower-left, W upper-left.
 	# A B-type gap is not a normal shoreline edge: land touches this water
 	# tile only at one diagonal grid neighbour. In the current visual layout
-	# these are the outward rocky land points. v2 uses direct small-land PNGs
+	# these are the outward rocky land points. v3 uses direct small-land PNGs
 	# so the shoreline point no longer projects deep into the water tile.
 	var diagonal_land_mask := 0
 	if not _is_water(x - 1, y - 1): diagonal_land_mask |= Dir.N

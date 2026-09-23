@@ -1,0 +1,130 @@
+{
+  "version": "3.0",
+  "logical_tile_size": [
+    64,
+    32
+  ],
+  "sprite_canvas": [
+    96,
+    72
+  ],
+  "logical_diamond_bbox_on_canvas": [
+    16,
+    36,
+    64,
+    32
+  ],
+  "anchor": [
+    48,
+    52
+  ],
+  "side_angle_degrees": 26.565051177,
+  "transparent_background": true,
+  "description": "Compact shoreline points from the approved September 23 artwork. Land and beach remain below one sixth of the tile.",
+  "orientation": {
+    "n": "visual top",
+    "e": "visual right",
+    "s": "visual bottom",
+    "w": "visual left"
+  },
+  "assets": [
+    "water/inner_points/water_inner_point_n.png",
+    "water/inner_points/water_inner_point_e.png",
+    "water/inner_points/water_inner_point_s.png",
+    "water/inner_points/water_inner_point_w.png"
+  ],
+  "preparation": [
+    {
+      "asset": "water/inner_points/water_inner_point_n.png",
+      "source_sha256": "d52299ff4be54852a145d28ff5c852a48c809db68ae1e831ea3944c73c08c2f7",
+      "source_vertices": [
+        [
+          723.5,
+          208.0
+        ],
+        [
+          1414.0,
+          609.0
+        ],
+        [
+          723.5,
+          1020.0
+        ],
+        [
+          33.0,
+          609.0
+        ]
+      ],
+      "warm_pixel_fraction": 0.0515
+    },
+    {
+      "asset": "water/inner_points/water_inner_point_e.png",
+      "source_sha256": "1300967ace698c6c42df3c7737f45e0b6f0bab9d459da0e99512a903961117ee",
+      "source_vertices": [
+        [
+          724.0,
+          206.0
+        ],
+        [
+          1400.0,
+          602.5
+        ],
+        [
+          723.5,
+          1004.0
+        ],
+        [
+          46.0,
+          602.5
+        ]
+      ],
+      "warm_pixel_fraction": 0.0689
+    },
+    {
+      "asset": "water/inner_points/water_inner_point_s.png",
+      "source_sha256": "47db0b1b9a3f679aabfc7dc8d1ea17dc842d8cf65d1dc06f1f6726bf494c37c3",
+      "source_vertices": [
+        [
+          723.0,
+          208.0
+        ],
+        [
+          1411.0,
+          608.0
+        ],
+        [
+          724.0,
+          1026.0
+        ],
+        [
+          37.0,
+          608.5
+        ]
+      ],
+      "warm_pixel_fraction": 0.0662
+    },
+    {
+      "asset": "water/inner_points/water_inner_point_w.png",
+      "source_sha256": "045db58bea34b149ea37c7a4f8d454110b6a62f479fe97cf0f99e2e4a8c051ab",
+      "source_vertices": [
+        [
+          723.5,
+          222.0
+        ],
+        [
+          1344.0,
+          558.5
+        ],
+        [
+          723.0,
+          915.0
+        ],
+        [
+          103.0,
+          560.0
+        ]
+      ],
+      "warm_pixel_fraction": 0.0671
+    }
+  ]
+}
