@@ -640,15 +640,17 @@ func _water_texture_key(x: int, y: int) -> String:
 		Dir.E | Dir.W:
 			return "water_channel_ew"
 
-		# Three land neighbours. Asset suffix names the open (water-connected) side.
+		# Three land neighbours. Convert from grid directions to visual diamond sides:
+		# grid N -> visual E, E -> visual S, S -> visual W, W -> visual N.
+		# The asset suffix names the visually open (water-connected) side.
 		Dir.E | Dir.S | Dir.W:
-			return "water_three_sides_north"
-		Dir.N | Dir.S | Dir.W:
 			return "water_three_sides_east"
-		Dir.N | Dir.E | Dir.W:
+		Dir.N | Dir.S | Dir.W:
 			return "water_three_sides_south"
-		Dir.N | Dir.E | Dir.S:
+		Dir.N | Dir.E | Dir.W:
 			return "water_three_sides_west"
+		Dir.N | Dir.E | Dir.S:
+			return "water_three_sides_north"
 
 		Dir.N | Dir.E | Dir.S | Dir.W:
 			return "water_four_sides"
