@@ -17,6 +17,7 @@ const ASSET_ROOT_WATER_V2 := "res://gaardsliv_water_assets_v2/"
 const ASSET_ROOT_STRAIGHT_SHORES := "res://gaardsliv_straight_shore_edges_v1/"
 const ASSET_ROOT_OUTER_CORNERS := "res://gaardsliv_lake_outer_corners_v2/"
 const ASSET_ROOT_INNER_POINTS := "res://gaardsliv_water_inner_points_v3/"
+const ASSET_ROOT_MISSING_WATER := "res://gaardsliv_water_missing_tiles_v1/"
 const TILE_TEXTURE_ORIGIN := Vector2(48.0, 52.0)
 const PROP_TEXTURE_ORIGIN := Vector2(48.0, 108.0)
 
@@ -130,6 +131,15 @@ func _load_asset_textures() -> void:
 		asset_textures["water_inner_point_%s" % suffix] = load(
 			ASSET_ROOT_INNER_POINTS + "water/inner_points/water_inner_point_%s.png" % suffix
 		)
+
+	# Structural water tiles for the remaining land-neighbour masks.
+	asset_textures["water_channel_ns"] = load(ASSET_ROOT_MISSING_WATER + "water/water_channel_ns_01.png")
+	asset_textures["water_channel_ew"] = load(ASSET_ROOT_MISSING_WATER + "water/water_channel_ew_01.png")
+	asset_textures["water_three_sides_north"] = load(ASSET_ROOT_MISSING_WATER + "water/water_three_sides_north.png")
+	asset_textures["water_three_sides_east"] = load(ASSET_ROOT_MISSING_WATER + "water/water_three_sides_east.png")
+	asset_textures["water_three_sides_south"] = load(ASSET_ROOT_MISSING_WATER + "water/water_three_sides_south.png")
+	asset_textures["water_three_sides_west"] = load(ASSET_ROOT_MISSING_WATER + "water/water_three_sides_west.png")
+	asset_textures["water_four_sides"] = load(ASSET_ROOT_MISSING_WATER + "water/water_four_sides.png")
 
 	# Keep v2 road textures available as emergency fallback while roads remain geometric.
 	for prefix in ["cobble", "gravel"]:
@@ -624,9 +634,25 @@ func _water_texture_key(x: int, y: int) -> String:
 		Dir.S | Dir.W:
 			return "water_outer_corner_w"
 
-	# Narrow tips, opposite banks and concave cases do not yet have a verified
-	# matching structural asset. Plain water avoids drawing land through a
-	# connected water surface while keeping those cases visible for inspection.
+		# Two opposite land neighbours = narrow channel / strait.
+		Dir.N | Dir.S:
+			return "water_channel_ns"
+		Dir.E | Dir.W:
+			return "water_channel_ew"
+
+		# Three land neighbours. Asset suffix names the open (water-connected) side.
+		Dir.E | Dir.S | Dir.W:
+			return "water_three_sides_north"
+		Dir.N | Dir.S | Dir.W:
+			return "water_three_sides_east"
+		Dir.N | Dir.E | Dir.W:
+			return "water_three_sides_south"
+		Dir.N | Dir.E | Dir.S:
+			return "water_three_sides_west"
+
+		Dir.N | Dir.E | Dir.S | Dir.W:
+			return "water_four_sides"
+
 	return "water_plain_v2"
 
 func _draw_forest_prop(x: int, y: int) -> void:
